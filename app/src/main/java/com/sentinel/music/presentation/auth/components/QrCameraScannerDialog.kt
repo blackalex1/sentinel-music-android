@@ -1,4 +1,4 @@
-﻿package com.sentinel.music.presentation.auth.components
+package com.sentinel.music.presentation.auth.components
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -81,15 +81,28 @@ fun QrCameraScannerDialog(
         ) {
             if (hasCameraPermission) {
                 var isScanned by remember { mutableStateOf(false) }
+                val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+                var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
+                DisposableEffect(lifecycleOwner) {
+                    onDispose {
+                        try {
+                            cameraProviderRef?.unbindAll()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        cameraExecutor.shutdown()
+                    }
+                }
 
                 AndroidView(
                     factory = { ctx ->
                         val previewView = PreviewView(ctx)
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                        val cameraExecutor = Executors.newSingleThreadExecutor()
 
                         cameraProviderFuture.addListener({
                             val cameraProvider = cameraProviderFuture.get()
+                            cameraProviderRef = cameraProvider
                             val preview = Preview.Builder().build().also {
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
@@ -113,6 +126,11 @@ fun QrCameraScannerDialog(
                                                 val rawValue = barcode.rawValue
                                                 if (!rawValue.isNullOrBlank() && !isScanned) {
                                                     isScanned = true
+                                                    try {
+                                                        cameraProvider.unbindAll()
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
                                                     previewView.post {
                                                         onQrScanned(rawValue)
                                                     }

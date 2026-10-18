@@ -38,9 +38,13 @@ data class TrackDto(
             else -> true
         }
     }
-    fun getCoverUrl(baseUrl: String, token: String = ""): String {
+    fun getCoverUrl(baseUrl: String, token: String = "", size: Int? = null): String {
         val clean = baseUrl.trim().removeSuffix("/")
-        return if (token.isNotBlank()) "$clean/api/covers/$id?token=$token" else "$clean/api/covers/$id"
+        val base = "$clean/api/covers/$id"
+        val params = mutableListOf<String>()
+        if (token.isNotBlank()) params.add("token=$token")
+        if (size != null && size > 0) params.add("size=$size")
+        return if (params.isNotEmpty()) "$base?${params.joinToString("&")}" else base
     }
 }
 

@@ -64,7 +64,10 @@ fun RecentTrackRow(
 
             Spacer(Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
                     text = track.title,
                     color = if (isPlayingCurrent) Color(0xFFBB86FC) else Color.White,
@@ -79,7 +82,8 @@ fun RecentTrackRow(
                         color = Color.Gray,
                         fontSize = 13.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     if (track.audioFormat.equals("flac", ignoreCase = true)) {
                         Spacer(Modifier.width(6.dp))
@@ -87,7 +91,9 @@ fun RecentTrackRow(
                             "FLAC",
                             fontSize = 10.sp,
                             color = Color(0xFF1DB954),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                     if (isDownloaded || isDownloading) {

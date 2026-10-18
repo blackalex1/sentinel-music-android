@@ -16,6 +16,7 @@ class MusicApp : Application(), ImageLoaderFactory {
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.25)
+                    .strongReferencesEnabled(true)
                     .build()
             }
             .diskCache {
@@ -25,7 +26,7 @@ class MusicApp : Application(), ImageLoaderFactory {
                     .build()
             }
             .respectCacheHeaders(false)
-            .crossfade(100)
+            .crossfade(false)
             .build()
     }
 }

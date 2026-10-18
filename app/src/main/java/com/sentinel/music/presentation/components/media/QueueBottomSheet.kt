@@ -137,7 +137,10 @@ fun QueueBottomSheet(
 
                             Spacer(Modifier.width(12.dp))
 
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 Text(
                                     text = track.title,
                                     color = Color.White,
@@ -149,6 +152,7 @@ fun QueueBottomSheet(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = track.artist,
+                                        modifier = Modifier.weight(1f, fill = false),
                                         color = Color.Gray,
                                         fontSize = 12.sp,
                                         maxLines = 1,

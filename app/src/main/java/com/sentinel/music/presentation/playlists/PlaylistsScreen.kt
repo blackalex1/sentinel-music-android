@@ -178,7 +178,10 @@ fun PlaylistsScreen(
                                 shapeRadius = 8.dp
                             )
                             Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 Text(
                                     track.title,
                                     color = if (isPlayingCurrent) Color(0xFFBB86FC) else Color.White,
@@ -190,6 +193,7 @@ fun PlaylistsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         track.artist,
+                                        modifier = Modifier.weight(1f, fill = false),
                                         color = Color.Gray,
                                         fontSize = 13.sp,
                                         maxLines = 1,

@@ -28,7 +28,7 @@ fun AppBottomNavigation(
             selected = selectedTab == MainTab.HOME,
             onClick = { onTabSelected(MainTab.HOME) },
             icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-            label = { Text("Главная", fontSize = 11.sp) },
+            label = { Text("Главная", fontSize = 10.sp, maxLines = 1, softWrap = false) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = Color(0xFF8A2BE2),
                 selectedTextColor = Color(0xFF8A2BE2),
@@ -41,7 +41,7 @@ fun AppBottomNavigation(
             selected = selectedTab == MainTab.STREAM,
             onClick = { onTabSelected(MainTab.STREAM) },
             icon = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
-            label = { Text("Поток", fontSize = 11.sp) },
+            label = { Text("Поток", fontSize = 10.sp, maxLines = 1, softWrap = false) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = Color(0xFF8A2BE2),
                 selectedTextColor = Color(0xFF8A2BE2),
@@ -54,7 +54,7 @@ fun AppBottomNavigation(
             selected = selectedTab == MainTab.TRACKS,
             onClick = { onTabSelected(MainTab.TRACKS) },
             icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
-            label = { Text("Треки", fontSize = 11.sp) },
+            label = { Text("Треки", fontSize = 10.sp, maxLines = 1, softWrap = false) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = Color(0xFF8A2BE2),
                 selectedTextColor = Color(0xFF8A2BE2),
@@ -67,7 +67,7 @@ fun AppBottomNavigation(
             selected = selectedTab == MainTab.PLAYLISTS,
             onClick = { onTabSelected(MainTab.PLAYLISTS) },
             icon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) },
-            label = { Text("Плейлисты", fontSize = 11.sp) },
+            label = { Text("Плейлисты", fontSize = 10.sp, maxLines = 1, softWrap = false) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = Color(0xFF8A2BE2),
                 selectedTextColor = Color(0xFF8A2BE2),
@@ -80,7 +80,7 @@ fun AppBottomNavigation(
             selected = selectedTab == MainTab.SETTINGS,
             onClick = { onTabSelected(MainTab.SETTINGS) },
             icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-            label = { Text("Настройки", fontSize = 11.sp) },
+            label = { Text("Настройки", fontSize = 10.sp, maxLines = 1, softWrap = false) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = Color(0xFF8A2BE2),
                 selectedTextColor = Color(0xFF8A2BE2),

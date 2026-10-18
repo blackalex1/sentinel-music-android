@@ -38,12 +38,16 @@ fun TrackCover(
     val context = LocalContext.current
     val density = LocalDensity.current
 
-    val coverUrl = remember(trackId, serverUrl, token) {
+    val coverUrl = remember(trackId, serverUrl, token, size) {
         if (trackId == null || trackId <= 0 || serverUrl.isBlank()) {
             null
         } else {
             val clean = serverUrl.trim().removeSuffix("/")
-            if (token.isNotBlank()) "$clean/api/covers/$trackId?token=$token" else "$clean/api/covers/$trackId"
+            val base = "$clean/api/covers/$trackId"
+            val queryParams = mutableListOf<String>()
+            if (token.isNotBlank()) queryParams.add("token=$token")
+            if (size <= 96.dp) queryParams.add("size=160")
+            if (queryParams.isEmpty()) base else "$base?${queryParams.joinToString("&")}"
         }
     }
 
@@ -75,6 +79,7 @@ fun TrackCover(
             val imageRequest = remember(coverUrl, pxSize) {
                 ImageRequest.Builder(context)
                     .data(coverUrl)
+                    .crossfade(false)
                     .size(pxSize, pxSize)
                     .scale(Scale.FILL)
                     .precision(Precision.INEXACT)
