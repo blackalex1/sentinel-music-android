@@ -1,4 +1,4 @@
-﻿package com.sentinel.music.presentation.auth.components
+package com.sentinel.music.presentation.auth.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,30 +17,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
+import com.sentinel.music.R
+
 @Composable
 fun AuthHeader(modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth()
     ) {
-        Box(
+        Image(
+            painter = painterResource(id = R.drawable.ic_mascot_dj),
+            contentDescription = "DJ Bugdroid Mascot",
             modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF8A2BE2), Color(0xFF4A00E0))
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ElectricBolt,
-                contentDescription = "Sentinel Logo",
-                tint = Color.White,
-                modifier = Modifier.size(44.dp)
-            )
-        }
+                .size(92.dp)
+                .clip(RoundedCornerShape(22.dp))
+        )
 
         Spacer(Modifier.height(16.dp))
 
