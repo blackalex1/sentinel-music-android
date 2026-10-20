@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.sentinel.music.data.session.SessionManager
 import com.sentinel.music.presentation.main.MainUiState
 import com.sentinel.music.presentation.main.MainViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -35,12 +36,80 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var showClearOfflineDialog by remember { mutableStateOf(false) }
     var showClearStreamDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    val currentAppVersion = "0.0.1"
+    var isCheckingAppUpdate by remember { mutableStateOf(false) }
+    var updateAvailableVersion by remember { mutableStateOf<String?>(null) }
+    var updateDownloadUrl by remember { mutableStateOf<String?>(null) }
+    var updateCheckMessage by remember { mutableStateOf<String?>("Проверка актуальности...") }
+
+    fun checkForAppUpdates() {
+        if (isCheckingAppUpdate) return
+        isCheckingAppUpdate = true
+        updateCheckMessage = "Проверка обновлений на GitHub..."
+        coroutineScope.launch {
+            try {
+                val url = java.net.URL("https://api.github.com/repos/blackalex1/sentinel-music-android/releases/latest")
+                val conn = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val c = url.openConnection() as java.net.HttpURLConnection
+                    c.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    c.connectTimeout = 8000
+                    c.readTimeout = 8000
+                    c
+                }
+                val code = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { conn.responseCode }
+                if (code == 200) {
+                    val body = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        conn.inputStream.bufferedReader().use { it.readText() }
+                    }
+                    val json = org.json.JSONObject(body)
+                    val tagName = json.optString("tag_name", "").removePrefix("v").trim()
+                    val htmlUrl = json.optString("html_url", "https://github.com/blackalex1/sentinel-music-android/releases")
+
+                    var apkUrl: String? = null
+                    val assets = json.optJSONArray("assets")
+                    if (assets != null) {
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            val name = asset.optString("name", "")
+                            if (name.endsWith(".apk", ignoreCase = true)) {
+                                apkUrl = asset.optString("browser_download_url", "")
+                                break
+                            }
+                        }
+                    }
+
+                    if (isNewerAppVersion(tagName, currentAppVersion)) {
+                        updateAvailableVersion = tagName
+                        updateDownloadUrl = apkUrl ?: htmlUrl
+                        updateCheckMessage = "Доступно обновление: v$tagName!"
+                    } else {
+                        updateAvailableVersion = null
+                        updateDownloadUrl = null
+                        updateCheckMessage = "У вас установлена актуальная версия (v$currentAppVersion)"
+                    }
+                } else if (code == 404) {
+                    updateAvailableVersion = null
+                    updateCheckMessage = "Релизов пока нет. У вас актуальная версия."
+                } else {
+                    updateCheckMessage = "Не удалось проверить обновления"
+                }
+            } catch (e: Exception) {
+                updateCheckMessage = "Не удалось связаться с GitHub"
+            } finally {
+                isCheckingAppUpdate = false
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
+        checkForAppUpdates()
     }
 
     LazyColumn(
@@ -281,12 +350,13 @@ fun SettingsScreen(
         }
 
         // ====================================================================
-        // 7. О ПРИЛОЖЕНИИ
+        // 7. О ПРИЛОЖЕНИИ И ОБНОВЛЕНИЯ С GITHUB
         // ====================================================================
         item {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF15131C),
+                color = if (updateAvailableVersion != null) Color(0xFF1E293B) else Color(0xFF15131C),
+                border = if (updateAvailableVersion != null) BorderStroke(1.dp, Color(0xFF38BDF8)) else null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -301,10 +371,65 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Версия 1.0.0 • Поддержка FLAC Lossless и Офлайн-кеша",
+                        text = "Версия $currentAppVersion • Поддержка FLAC Lossless и Офлайн-кеша",
                         color = Color.Gray,
                         fontSize = 12.sp
                     )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    if (updateAvailableVersion != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0x3310B981),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            Text(
+                                text = "Доступно обновление: v$updateAvailableVersion!",
+                                color = Color(0xFF34D399),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                updateDownloadUrl?.let { url ->
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                    context.startActivity(intent)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = "Обновить с GitHub",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        if (updateCheckMessage != null) {
+                            Text(
+                                text = updateCheckMessage ?: "",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 12.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        TextButton(
+                            onClick = { checkForAppUpdates() },
+                            enabled = !isCheckingAppUpdate
+                        ) {
+                            Text(
+                                text = if (isCheckingAppUpdate) "Проверка..." else "Проверить обновления",
+                                color = Color(0xFFA78BFA),
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -782,6 +907,20 @@ private fun SettingsSwitchRow(
             )
         )
     }
+}
+
+private fun isNewerAppVersion(latest: String, current: String): Boolean {
+    if (latest.isBlank() || current.isBlank()) return false
+    val lParts = latest.split(".").mapNotNull { it.toIntOrNull() }
+    val cParts = current.split(".").mapNotNull { it.toIntOrNull() }
+    val maxLen = maxOf(lParts.size, cParts.size)
+    for (i in 0 until maxLen) {
+        val l = lParts.getOrElse(i) { 0 }
+        val c = cParts.getOrElse(i) { 0 }
+        if (l > c) return true
+        if (l < c) return false
+    }
+    return false
 }
 
 private fun formatBytes(bytes: Long): String {
