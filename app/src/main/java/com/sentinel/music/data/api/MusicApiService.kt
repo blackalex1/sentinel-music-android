@@ -34,6 +34,9 @@ interface MusicApiService {
     @GET("/api/auth/status")
     suspend fun getAuthStatus(): AuthStatusResponse
 
+    @GET("/api/auth/me")
+    suspend fun getMe(): com.sentinel.music.data.model.UserProfileDto
+
     @POST("/api/auth/login")
     suspend fun login(@Body req: AuthRequest): AuthResponse
 

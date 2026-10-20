@@ -1,4 +1,4 @@
-﻿package com.sentinel.music.data.model
+package com.sentinel.music.data.model
 
 import com.google.gson.annotations.SerializedName
 
@@ -17,4 +17,10 @@ data class AuthResponse(
 
 data class AuthStatusResponse(
     val initialized: Boolean
+)
+
+data class UserProfileDto(
+    val id: Int,
+    val username: String,
+    @SerializedName("is_admin") val isAdmin: Boolean
 )

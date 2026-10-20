@@ -56,9 +56,9 @@ fun SettingsScreen(
         // ====================================================================
         item {
             AccountCard(
-                username = sessionManager.username ?: "Пользователь",
+                username = state.currentUsername.ifEmpty { sessionManager.username ?: "Пользователь" },
                 serverUrl = sessionManager.serverUrl,
-                isAdmin = sessionManager.isAdmin,
+                isAdmin = state.isCurrentUserAdmin || sessionManager.isAdmin,
                 onLogoutClick = { showLogoutDialog = true }
             )
         }

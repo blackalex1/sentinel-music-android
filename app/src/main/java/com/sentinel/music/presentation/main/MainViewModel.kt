@@ -58,7 +58,9 @@ class MainViewModel(
             downloadingTrackIds = offlineManager.downloadingTrackIds.value,
             isLoudnessNormalizationEnabled = sessionManager.isLoudnessNormalizationEnabled,
             loudnessTargetLufs = sessionManager.loudnessTargetLufs,
-            isPcPlaybackHandoffEnabled = sessionManager.isPcPlaybackHandoffEnabled
+            isPcPlaybackHandoffEnabled = sessionManager.isPcPlaybackHandoffEnabled,
+            currentUsername = sessionManager.username ?: "",
+            isCurrentUserAdmin = sessionManager.isAdmin
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -142,6 +144,7 @@ class MainViewModel(
     val libraryLoaderModule: LibraryLoaderModule = LibraryLoaderModule(
         scope = viewModelScope,
         api = api,
+        sessionManager = sessionManager,
         uiStateFlow = _uiState
     )
 

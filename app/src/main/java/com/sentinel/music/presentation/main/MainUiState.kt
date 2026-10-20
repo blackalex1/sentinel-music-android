@@ -80,5 +80,7 @@ data class MainUiState(
     val isPcOnline: Boolean = false,
     val discoveredPc: com.sentinel.music.data.model.RemoteDeviceDto? = null,
     val showStartupDeviceChooser: Boolean = false,
-    val isPcPlaybackHandoffEnabled: Boolean = true
+    val isPcPlaybackHandoffEnabled: Boolean = true,
+    val currentUsername: String = "",
+    val isCurrentUserAdmin: Boolean = false
 )

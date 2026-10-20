@@ -2,6 +2,7 @@ package com.sentinel.music.presentation.main.modules
 
 import com.sentinel.music.data.api.MusicApiService
 import com.sentinel.music.data.model.TrackDto
+import com.sentinel.music.data.session.SessionManager
 import com.sentinel.music.presentation.main.MainUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,10 +17,26 @@ import kotlinx.coroutines.withContext
 class LibraryLoaderModule(
     private val scope: CoroutineScope,
     private val api: MusicApiService,
+    private val sessionManager: SessionManager,
     private val uiStateFlow: MutableStateFlow<MainUiState>
 ) {
     fun loadInitialData() {
         scope.launch {
+            // 0. Синхронизируем актуальные данные профиля пользователя (username, isAdmin) с сервера
+            try {
+                val profile = withContext(Dispatchers.IO) { api.getMe() }
+                sessionManager.username = profile.username
+                sessionManager.isAdmin = profile.isAdmin
+                uiStateFlow.update {
+                    it.copy(
+                        currentUsername = profile.username,
+                        isCurrentUserAdmin = profile.isAdmin
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             uiStateFlow.update { it.copy(isLoadingTracks = true, errorMessage = null) }
 
             // 1. Загружаем точное количество треков на сервере (/api/tracks/count)
