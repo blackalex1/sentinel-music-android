@@ -142,7 +142,21 @@ class SearchModule(
                 onComplete(isSuccess, message)
             } catch (e: Exception) {
                 e.printStackTrace()
-                onComplete(false, e.localizedMessage)
+                var errorMsg = e.localizedMessage
+                if (e is retrofit2.HttpException) {
+                    try {
+                        val body = e.response()?.errorBody()?.string()
+                        if (!body.isNullOrBlank()) {
+                            val json = com.google.gson.JsonParser.parseString(body).asJsonObject
+                            if (json.has("detail") && !json.get("detail").isJsonNull) {
+                                errorMsg = json.get("detail").asString
+                            } else if (json.has("message") && !json.get("message").isJsonNull) {
+                                errorMsg = json.get("message").asString
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+                onComplete(false, errorMsg)
             }
         }
     }
