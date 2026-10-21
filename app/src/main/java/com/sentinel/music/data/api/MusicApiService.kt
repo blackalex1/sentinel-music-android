@@ -30,6 +30,7 @@ typealias PlaylistDetailsDto = com.sentinel.music.data.model.PlaylistDetailsDto
 typealias CreatePlaylistRequest = com.sentinel.music.data.model.CreatePlaylistRequest
 typealias AddTrackToPlaylistRequest = com.sentinel.music.data.model.AddTrackToPlaylistRequest
 
+@JvmSuppressWildcards
 interface MusicApiService {
     @GET("/api/auth/status")
     suspend fun getAuthStatus(): AuthStatusResponse
