@@ -16,7 +16,7 @@
 ## Установка
 
 Вы можете скачать готовый файл приложения:
-- **`Sentinel-Music-v0.0.1.apk`** со страницы [Релизов на GitHub](https://github.com/blackalex1/sentinel-music-android/releases).
+- **`Sentinel-Music-v0.0.2.apk`** со страницы [Релизов на GitHub](https://github.com/blackalex1/sentinel-music-android/releases).
 
 ---
 

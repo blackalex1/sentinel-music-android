@@ -42,7 +42,7 @@ fun SettingsScreen(
     var showClearStreamDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    val currentAppVersion = "0.0.1"
+    val currentAppVersion = "0.0.2"
     var isCheckingAppUpdate by remember { mutableStateOf(false) }
     var updateAvailableVersion by remember { mutableStateOf<String?>(null) }
     var updateDownloadUrl by remember { mutableStateOf<String?>(null) }
