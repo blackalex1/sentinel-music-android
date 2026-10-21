@@ -16,14 +16,16 @@ data class RemoteDeviceDto(
     @SerializedName("duration_ms") val durationMs: Long = 0L,
     val volume: Float = 1.0f,
     @SerializedName("is_muted") val isMuted: Boolean = false,
-    @SerializedName("repeat_mode") val repeatMode: String = "off",
-    @SerializedName("is_shuffle") val isShuffle: Boolean = false,
+    @SerializedName("repeat_mode") val repeatMode: String? = "off",
+    @SerializedName("is_shuffle") val isShuffle: Boolean? = false,
     @SerializedName("last_seen") val lastSeen: Double = 0.0,
     val equalizer: RemoteEqualizerDto? = null,
     val limiter: RemoteLimiterDto? = null,
     val queue: List<TrackDto>? = null
 ) {
     val safeQueue: List<TrackDto> get() = queue ?: emptyList()
+    val safeRepeatMode: String get() = repeatMode?.lowercase() ?: "off"
+    val safeIsShuffle: Boolean get() = isShuffle ?: false
 }
 
 data class RemotePlaybackSessionDto(

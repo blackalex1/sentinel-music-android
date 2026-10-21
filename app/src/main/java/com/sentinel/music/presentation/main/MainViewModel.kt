@@ -276,8 +276,8 @@ class MainViewModel(
                                 queue = if (devQueue.isNotEmpty()) devQueue else it.queue,
                                 isLiked = dev.currentTrack.isLiked,
                                 isDisliked = dev.currentTrack.isDisliked,
-                                isShuffleEnabled = dev.isShuffle,
-                                repeatMode = when (dev.repeatMode.lowercase()) {
+                                isShuffleEnabled = dev.safeIsShuffle,
+                                repeatMode = when (dev.safeRepeatMode) {
                                     "one" -> PlaybackRepeatMode.ONE
                                     "all" -> PlaybackRepeatMode.ALL
                                     else -> PlaybackRepeatMode.OFF
