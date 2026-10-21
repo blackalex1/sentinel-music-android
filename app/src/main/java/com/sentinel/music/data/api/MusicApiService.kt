@@ -136,6 +136,9 @@ interface MusicApiService {
         @Body req: Map<String, Any?>
     ): Map<String, Any?>
 
+    @GET("/api/watcher")
+    suspend fun getWatcherStatus(): Map<String, Any?>
+
     @GET("/api/remote/devices")
     suspend fun getRemoteDevices(): com.sentinel.music.data.model.RemoteDevicesResponse
 

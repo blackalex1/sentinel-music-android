@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -420,81 +421,87 @@ fun TracksScreen(
                 }
             }
 
-            // Список треков или пустое состояние
-            if (filteredTracks.isEmpty() && !isSearching) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 90.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Filled.SearchOff,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = if (searchQuery.isNotBlank()) "Ничего не найдено" else "Список треков пуст",
-                            color = Color.White,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = if (searchQuery.isNotBlank()) {
-                                "Попробуйте перейти на вкладку «Новые треки» для поиска в сети"
-                            } else {
-                                "В вашей коллекции пока нет добавленных треков"
-                            },
-                            color = Color.Gray,
-                            fontSize = 13.sp
-                        )
+            // Список треков или пустое состояние с поддержкой свайпа для обновления (Pull-to-Refresh)
+            PullToRefreshBox(
+                isRefreshing = isLoadingTracks,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (filteredTracks.isEmpty() && !isSearching) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 90.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Filled.SearchOff,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "Ничего не найдено" else "Список треков пуст",
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = if (searchQuery.isNotBlank()) {
+                                    "Попробуйте перейти на вкладку «Новые треки» для поиска в сети"
+                                } else {
+                                    "В вашей коллекции пока нет добавленных треков"
+                                },
+                                color = Color.Gray,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 100.dp, top = 4.dp)
-                ) {
-                    items(
-                        items = filteredTracks,
-                        key = { it.id },
-                        contentType = { "track_row" }
-                    ) { track ->
-                        val isDownloaded = downloadedTrackIds.contains(track.id)
-                        val isDownloading = downloadingTrackIds.contains(track.id)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 100.dp, top = 4.dp)
+                    ) {
+                        items(
+                            items = filteredTracks,
+                            key = { it.id },
+                            contentType = { "track_row" }
+                        ) { track ->
+                            val isDownloaded = downloadedTrackIds.contains(track.id)
+                            val isDownloading = downloadingTrackIds.contains(track.id)
 
-                        TrackItemRow(
-                            track = track,
-                            isPlayingCurrent = currentTrack?.id == track.id,
-                            isDownloaded = isDownloaded,
-                            isDownloading = isDownloading,
-                            serverUrl = serverUrl,
-                            token = token,
-                            onDownloadTrack = onDownloadTrack,
-                            onDeleteDownloadedTrack = onDeleteDownloadedTrack,
-                            onTrackClick = {
-                                try {
-                                    previewPlayer?.stop()
-                                    previewPlayer?.release()
-                                } catch (_: Exception) {}
-                                previewPlayer = null
-                                previewingCandidateId = null
+                            TrackItemRow(
+                                track = track,
+                                isPlayingCurrent = currentTrack?.id == track.id,
+                                isDownloaded = isDownloaded,
+                                isDownloading = isDownloading,
+                                serverUrl = serverUrl,
+                                token = token,
+                                onDownloadTrack = onDownloadTrack,
+                                onDeleteDownloadedTrack = onDeleteDownloadedTrack,
+                                onTrackClick = {
+                                    try {
+                                        previewPlayer?.stop()
+                                        previewPlayer?.release()
+                                    } catch (_: Exception) {}
+                                    previewPlayer = null
+                                    previewingCandidateId = null
 
-                                val trackIndex = filteredTracks.indexOfFirst { it.id == track.id }
-                                val upcoming = if (trackIndex != -1 && trackIndex < filteredTracks.size - 1) {
-                                    filteredTracks.subList(trackIndex + 1, filteredTracks.size)
-                                } else emptyList()
-                                onTrackClick(track, upcoming)
-                            },
-                            onLikeTrack = onLikeTrack,
-                            onAddToPlaylistClick = onAddToPlaylistClick,
-                            onReplaceTrackClick = onReplaceTrackClick
-                        )
-                        HorizontalDivider(color = Color(0xFF1E1E1E))
+                                    val trackIndex = filteredTracks.indexOfFirst { it.id == track.id }
+                                    val upcoming = if (trackIndex != -1 && trackIndex < filteredTracks.size - 1) {
+                                        filteredTracks.subList(trackIndex + 1, filteredTracks.size)
+                                    } else emptyList()
+                                    onTrackClick(track, upcoming)
+                                },
+                                onLikeTrack = onLikeTrack,
+                                onAddToPlaylistClick = onAddToPlaylistClick,
+                                onReplaceTrackClick = onReplaceTrackClick
+                            )
+                            HorizontalDivider(color = Color(0xFF1E1E1E))
+                        }
                     }
                 }
             }
