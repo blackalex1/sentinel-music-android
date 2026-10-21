@@ -276,6 +276,12 @@ class MainViewModel(
                                 queue = if (devQueue.isNotEmpty()) devQueue else it.queue,
                                 isLiked = dev.currentTrack.isLiked,
                                 isDisliked = dev.currentTrack.isDisliked,
+                                isShuffleEnabled = dev.isShuffle,
+                                repeatMode = when (dev.repeatMode.lowercase()) {
+                                    "one" -> PlaybackRepeatMode.ONE
+                                    "all" -> PlaybackRepeatMode.ALL
+                                    else -> PlaybackRepeatMode.OFF
+                                },
                                 lyrics = if (trackChanged) emptyList() else it.lyrics
                             )
                         }

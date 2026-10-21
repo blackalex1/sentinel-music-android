@@ -143,7 +143,9 @@ interface MusicApiService {
     suspend fun getRemoteDevices(): com.sentinel.music.data.model.RemoteDevicesResponse
 
     @GET("/api/remote/status")
-    suspend fun getRemoteStatus(): com.sentinel.music.data.model.RemoteStatusResponse
+    suspend fun getRemoteStatus(
+        @retrofit2.http.Query("device_id") deviceId: String? = null
+    ): com.sentinel.music.data.model.RemoteStatusResponse
 
     @POST("/api/remote/command")
     suspend fun sendRemoteCommand(

@@ -544,10 +544,16 @@ class PlaybackModule(
     }
 
     fun toggleRepeatMode() {
+        val active = uiStateFlow.value.activeDevice
         val nextMode = when (uiStateFlow.value.repeatMode) {
             PlaybackRepeatMode.OFF -> PlaybackRepeatMode.ALL
             PlaybackRepeatMode.ALL -> PlaybackRepeatMode.ONE
             PlaybackRepeatMode.ONE -> PlaybackRepeatMode.OFF
+        }
+        if (active != null) {
+            remoteController.toggleRepeat()
+            uiStateFlow.update { it.copy(repeatMode = nextMode) }
+            return
         }
         val exoMode = when (nextMode) {
             PlaybackRepeatMode.OFF -> Player.REPEAT_MODE_OFF
@@ -559,7 +565,13 @@ class PlaybackModule(
     }
 
     fun toggleShuffleMode() {
+        val active = uiStateFlow.value.activeDevice
         val nextShuffle = !uiStateFlow.value.isShuffleEnabled
+        if (active != null) {
+            remoteController.toggleShuffle()
+            uiStateFlow.update { it.copy(isShuffleEnabled = nextShuffle) }
+            return
+        }
         mediaController?.shuffleModeEnabled = nextShuffle
         uiStateFlow.update { it.copy(isShuffleEnabled = nextShuffle) }
     }

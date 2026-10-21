@@ -37,11 +37,12 @@ class RemoteController(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val okHttpClient = com.sentinel.music.data.api.NetworkClient.sharedOkHttpClient.newBuilder()
-        .connectTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS) // 0 для непрерывного WebSocket стрима
-        .pingInterval(10, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS)
         .build()
 
+    @Volatile
     private var webSocket: WebSocket? = null
     private var reconnectJob: Job? = null
 
@@ -58,16 +59,18 @@ class RemoteController(
     val remoteStatus: StateFlow<com.sentinel.music.data.model.RemoteStatusResponse?> = _remoteStatus.asStateFlow()
 
     fun start() {
-        connectWebSocket()
+        if (!_isConnected.value && webSocket == null) {
+            connectWebSocket()
+        }
         refreshDevicesHttp()
     }
 
     suspend fun checkRemoteStatus(): com.sentinel.music.data.model.RemoteStatusResponse? {
         return try {
             if (sessionManager.isLoggedIn) {
-                val status = api.getRemoteStatus()
-                _remoteStatus.value = status
                 val myId = sessionManager.deviceId
+                val status = api.getRemoteStatus(myId)
+                _remoteStatus.value = status
                 _devices.value = status.safeOnlineDevices.filter { it.id != myId }
                 status
             } else null
@@ -79,8 +82,12 @@ class RemoteController(
 
     fun stop() {
         reconnectJob?.cancel()
-        webSocket?.close(1000, "App closed")
+        reconnectJob = null
+        val curWs = webSocket
         webSocket = null
+        try {
+            curWs?.close(1000, "App closed")
+        } catch (_: Exception) {}
         _isConnected.value = false
         _devices.value = emptyList()
         _selectedDevice.value = null
@@ -113,11 +120,23 @@ class RemoteController(
         }
     }
 
+    @Synchronized
     private fun connectWebSocket() {
         if (!sessionManager.isLoggedIn) return
+        if (_isConnected.value && webSocket != null) return
+
         val serverUrl = sessionManager.serverUrl
         val token = sessionManager.token ?: return
         if (serverUrl.isBlank()) return
+
+        reconnectJob?.cancel()
+        reconnectJob = null
+
+        val oldWs = webSocket
+        webSocket = null
+        try {
+            oldWs?.close(1000, "Reconnecting")
+        } catch (_: Exception) {}
 
         val myId = sessionManager.deviceId
         val modelName = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
@@ -134,39 +153,56 @@ class RemoteController(
 
         val request = Request.Builder().url(wsUrl).build()
 
-        webSocket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
+        val newWs = okHttpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (this@RemoteController.webSocket !== webSocket) {
+                    try { webSocket.close(1000, "Stale") } catch (_: Exception) {}
+                    return
+                }
                 Log.i(tag, "Sentinel Connect WebSocket успешно подключен!")
                 _isConnected.value = true
                 reconnectJob?.cancel()
+                reconnectJob = null
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                if (this@RemoteController.webSocket !== webSocket) return
                 handleIncomingMessage(text)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (this@RemoteController.webSocket !== webSocket) return
                 _isConnected.value = false
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                if (this@RemoteController.webSocket !== webSocket) return
                 _isConnected.value = false
-                scheduleReconnect()
+                this@RemoteController.webSocket = null
+                // Не переподключаемся при нормальном закрытии (код 1000)
+                if (code != 1000) {
+                    scheduleReconnect()
+                }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (this@RemoteController.webSocket !== webSocket) return
                 Log.w(tag, "Сбой WebSocket соединения: ${t.message}")
                 _isConnected.value = false
+                this@RemoteController.webSocket = null
                 scheduleReconnect()
             }
         })
+
+        webSocket = newWs
     }
 
     private fun scheduleReconnect() {
+        if (_isConnected.value) return
         if (reconnectJob?.isActive == true) return
         reconnectJob = scope.launch {
-            delay(4000)
-            if (isActive && sessionManager.isLoggedIn) {
+            delay(5000)
+            if (isActive && sessionManager.isLoggedIn && !_isConnected.value) {
                 Log.d(tag, "Попытка переподключения WebSocket...")
                 connectWebSocket()
             }
@@ -180,6 +216,9 @@ class RemoteController(
             val myId = sessionManager.deviceId
 
             when (type) {
+                "pong" -> {
+                    // Сердечный ритм от сервера
+                }
                 "welcome", "devices_update" -> {
                     val devicesArray = json.getAsJsonArray("devices")
                     if (devicesArray != null) {
@@ -263,7 +302,16 @@ class RemoteController(
     fun pause() = sendCommand("PAUSE")
     fun next() = sendCommand("NEXT")
     fun prev() = sendCommand("PREV")
-    fun seekTo(positionMs: Long) = sendCommand("SEEK", mapOf("position_seconds" to positionMs / 1000.0))
+    fun seekTo(positionMs: Long) = sendCommand("SEEK", mapOf(
+        "position_seconds" to positionMs / 1000.0,
+        "position_ms" to positionMs
+    ))
+    fun setVolume(volume: Float) = sendCommand("SET_VOLUME", mapOf("volume" to volume.coerceIn(0f, 1f)))
+    fun setReaction(trackId: Int, isLiked: Boolean, isDisliked: Boolean) = sendCommand("SET_REACTION", mapOf(
+        "track_id" to trackId,
+        "is_liked" to isLiked,
+        "is_disliked" to isDisliked
+    ))
     fun playTrack(track: TrackDto, positionSeconds: Double? = null, queue: List<TrackDto>? = null, autoPlay: Boolean = true) = sendCommand(
         "PLAY_TRACK",
         mutableMapOf<String, Any?>("track" to track, "auto_play" to autoPlay).apply {

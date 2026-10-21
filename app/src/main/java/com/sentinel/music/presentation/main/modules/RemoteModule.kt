@@ -140,20 +140,21 @@ class RemoteModule(
                 syncRemoteStateToService(device)
             } else if (localTrack != null && current.isPcPlaybackHandoffEnabled) {
                 // На ПК музыка не играет, а на телефоне играл/стоял на паузе трек.
-                // Передаем текущий трек, позицию и очередь с телефона на ПК БЕЗ автозапуска воспроизведения!
+                // Передаем текущий трек, позицию и очередь с телефона на ПК с сохранением состояния воспроизведения!
+                val shouldPlay = current.isPlaying
                 remoteController.transferPlaybackToDevice(
                     targetDeviceId = device.id,
                     track = localTrack,
                     queue = localQueue,
                     positionMs = localPos,
-                    autoPlay = false
+                    autoPlay = shouldPlay
                 )
                 val dur = (localTrack.duration * 1000).toLong().coerceAtLeast(1L)
                 val updatedDev = device.copy(
                     currentTrack = localTrack,
                     positionMs = localPos,
                     durationMs = dur,
-                    isPlaying = false,
+                    isPlaying = shouldPlay,
                     queue = localQueue
                 )
                 uiStateFlow.update {
@@ -161,7 +162,7 @@ class RemoteModule(
                         activeDevice = updatedDev,
                         isDevicesDialogOpen = false,
                         currentTrack = localTrack,
-                        isPlaying = false,
+                        isPlaying = shouldPlay,
                         currentProgressMs = localPos,
                         durationMs = dur,
                         queue = localQueue,
