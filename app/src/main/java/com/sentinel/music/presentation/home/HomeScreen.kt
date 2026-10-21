@@ -3,7 +3,9 @@ package com.sentinel.music.presentation.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +22,7 @@ import com.sentinel.music.presentation.home.models.HomeMoodItem
 typealias HomeMoodItem = com.sentinel.music.presentation.home.models.HomeMoodItem
 val HOME_MOODS = DEFAULT_HOME_MOODS
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     recentTracks: List<TrackDto>,
@@ -29,6 +32,8 @@ fun HomeScreen(
     token: String,
     downloadedTrackIds: Set<Int> = emptySet(),
     downloadingTrackIds: Set<Int> = emptySet(),
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     onTrackClick: (TrackDto, List<TrackDto>) -> Unit,
     onStartStreamClick: () -> Unit = {},
     onMoodClick: (String) -> Unit = {},
@@ -39,12 +44,17 @@ fun HomeScreen(
     onDownloadTrack: ((TrackDto) -> Unit)? = null,
     onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp)
+        ) {
         // Секция коллекций настроений
         item {
             MoodCollectionsSection(
@@ -102,4 +112,5 @@ fun HomeScreen(
             }
         }
     }
+}
 }

@@ -252,6 +252,8 @@ fun MainScreen(
                         token = token,
                         downloadedTrackIds = state.downloadedTrackIds,
                         downloadingTrackIds = state.downloadingTrackIds,
+                        isRefreshing = state.isLoadingTracks,
+                        onRefresh = { viewModel.loadInitialData() },
                         onTrackClick = { track, queue -> viewModel.playTrack(track, queue) },
                         onStartStreamClick = {
                             viewModel.startStream()
