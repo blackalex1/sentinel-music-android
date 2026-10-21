@@ -48,6 +48,107 @@ fun SettingsScreen(
     var updateDownloadUrl by remember { mutableStateOf<String?>(null) }
     var updateCheckMessage by remember { mutableStateOf<String?>("Проверка актуальности...") }
 
+    var isDownloadingUpdate by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0f) }
+    var downloadStatusText by remember { mutableStateOf<String?>(null) }
+
+    fun startInAppUpdate(apkUrl: String, version: String) {
+        if (isDownloadingUpdate) return
+        isDownloadingUpdate = true
+        downloadProgress = 0f
+        downloadStatusText = "Подключение к GitHub..."
+
+        coroutineScope.launch {
+            try {
+                val apkFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val updateDir = java.io.File(context.cacheDir, "updates")
+                    if (!updateDir.exists()) updateDir.mkdirs()
+                    val targetFile = java.io.File(updateDir, "Sentinel-Music-v$version.apk")
+                    if (targetFile.exists()) targetFile.delete()
+
+                    var url = java.net.URL(apkUrl)
+                    var conn = url.openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 20000
+                    conn.instanceFollowRedirects = true
+
+                    // Обработка HTTP-редиректов (GitHub releases перенаправляет на AWS S3)
+                    var responseCode = conn.responseCode
+                    var redirectCount = 0
+                    while ((responseCode in 301..308) && redirectCount < 5) {
+                        val newUrl = conn.getHeaderField("Location") ?: break
+                        conn.disconnect()
+                        url = java.net.URL(newUrl)
+                        conn = url.openConnection() as java.net.HttpURLConnection
+                        conn.connectTimeout = 15000
+                        conn.readTimeout = 20000
+                        responseCode = conn.responseCode
+                        redirectCount++
+                    }
+
+                    val totalLength = conn.contentLengthLong
+                    conn.inputStream.use { input ->
+                        targetFile.outputStream().use { output ->
+                            val buffer = ByteArray(32768)
+                            var bytesRead: Int
+                            var totalBytesRead = 0L
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                totalBytesRead += bytesRead
+                                if (totalLength > 0) {
+                                    val prog = totalBytesRead.toFloat() / totalLength.toFloat()
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        downloadProgress = prog
+                                        val mbRead = totalBytesRead / (1024f * 1024f)
+                                        val mbTotal = totalLength / (1024f * 1024f)
+                                        downloadStatusText = String.format(Locale.US, "Загрузка: %.1f МБ / %.1f МБ (%.0f%%)", mbRead, mbTotal, prog * 100f)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    targetFile
+                }
+
+                downloadStatusText = "Запуск установщика..."
+                kotlinx.coroutines.delay(200)
+
+                val apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    apkFile
+                )
+
+                // Проверка разрешения на установку пакетов (Android 8.0+)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    if (!context.packageManager.canRequestPackageInstalls()) {
+                        val permIntent = android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            android.net.Uri.parse("package:${context.packageName}")
+                        ).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(permIntent)
+                        downloadStatusText = "Разрешите установку из источника и повторите"
+                        return@launch
+                    }
+                }
+
+                val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(installIntent)
+                downloadStatusText = "Установщик запущен"
+            } catch (e: Exception) {
+                downloadStatusText = "Ошибка загрузки: ${e.message}"
+            } finally {
+                isDownloadingUpdate = false
+            }
+        }
+    }
+
     fun checkForAppUpdates() {
         if (isCheckingAppUpdate) return
         isCheckingAppUpdate = true
@@ -393,21 +494,79 @@ fun SettingsScreen(
                             )
                         }
 
-                        Button(
-                            onClick = {
-                                updateDownloadUrl?.let { url ->
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                                    context.startActivity(intent)
+                        if (isDownloadingUpdate) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                LinearProgressIndicator(
+                                    progress = { downloadProgress },
+                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                    color = Color(0xFF38BDF8),
+                                    trackColor = Color(0xFF334155)
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = downloadStatusText ?: "Загрузка обновления...",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        } else {
+                            if (downloadStatusText != null) {
+                                Text(
+                                    text = downloadStatusText ?: "",
+                                    color = Color(0xFFF87171),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                )
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = {
+                                        val apkUrl = updateDownloadUrl
+                                        val version = updateAvailableVersion
+                                        if (apkUrl != null && version != null) {
+                                            if (apkUrl.endsWith(".apk", ignoreCase = true)) {
+                                                startInAppUpdate(apkUrl, version)
+                                            } else {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(apkUrl))
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Установить обновление",
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text(
-                                text = "Обновить с GitHub",
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold
-                            )
+
+                                TextButton(
+                                    onClick = {
+                                        updateDownloadUrl?.let { url ->
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                            context.startActivity(intent)
+                                        }
+                                    }
+                                ) {
+                                    Text(
+                                        text = "GitHub",
+                                        color = Color(0xFFA78BFA),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
                     } else {
                         if (updateCheckMessage != null) {
