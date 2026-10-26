@@ -5,10 +5,8 @@ plugins {
 
 val versionFile = rootProject.file("VERSION")
 val appVersionName: String = if (versionFile.exists()) versionFile.readText().trim() else "0.0.3"
-val semverParts = appVersionName.removePrefix("v").split(".").mapNotNull { it.toIntOrNull() }
-val appVersionCode: Int = if (semverParts.size >= 3) {
-    semverParts[0] * 10000 + semverParts[1] * 100 + semverParts[2]
-} else 3
+// versionCode берется из последней цифры версии релиза: 0.0.3 -> 3, 0.0.4 -> 4
+val appVersionCode: Int = appVersionName.substringAfterLast('.').filter { it.isDigit() }.toIntOrNull() ?: 1
 
 android {
     namespace = "com.sentinel.music"
