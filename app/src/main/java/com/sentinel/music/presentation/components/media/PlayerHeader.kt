@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun PlayerHeader(
-    audioFormat: String,
+    audioFormat: String? = "mp3",
     showLyrics: Boolean = false,
     onDismiss: () -> Unit,
     onToggleLyrics: (() -> Unit)? = null,
@@ -34,6 +34,8 @@ fun PlayerHeader(
     onOpenDevices: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val displayFormat = audioFormat?.takeIf { it.isNotBlank() }?.uppercase() ?: "MP3"
+    val isFlac = displayFormat.equals("FLAC", ignoreCase = true)
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -70,11 +72,11 @@ fun PlayerHeader(
                 modifier = Modifier.padding(top = 2.dp)
             ) {
                 Surface(
-                    color = if (audioFormat.equals("flac", ignoreCase = true)) Color(0xFF1DB954) else Color(0xFF444444),
+                    color = if (isFlac) Color(0xFF1DB954) else Color(0xFF444444),
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        text = audioFormat.uppercase(),
+                        text = displayFormat,
                         color = Color.White,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,

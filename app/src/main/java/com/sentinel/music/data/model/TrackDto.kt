@@ -8,7 +8,7 @@ data class TrackDto(
     val artist: String,
     val album: String? = null,
     val duration: Double = 0.0,
-    @SerializedName("audio_format") val audioFormat: String = "mp3",
+    @SerializedName("audio_format") val audioFormat: String? = "mp3",
     val bitrate: Int? = null,
     @SerializedName("file_size") val fileSize: Long? = null,
     val bpm: Float? = null,
@@ -18,8 +18,15 @@ data class TrackDto(
     @SerializedName("loudness_lufs") val loudnessLufs: Float? = null,
     @SerializedName("gain_db") val gainDb: Double? = null,
     @SerializedName("is_liked") val isLiked: Boolean = false,
-    @SerializedName("is_disliked") val isDisliked: Boolean = false
+    @SerializedName("is_disliked") val isDisliked: Boolean = false,
+    val isPreview: Boolean = false,
+    val candidateId: String? = null,
+    val coverUrl: String? = null
 ) {
+    val safeAudioFormat: String get() = audioFormat?.takeIf { it.isNotBlank() } ?: "mp3"
+    val safeTitle: String get() = title?.takeIf { it.isNotBlank() } ?: "Без названия"
+    val safeArtist: String get() = artist?.takeIf { it.isNotBlank() } ?: "Неизвестный исполнитель"
+
     fun matchesMood(mood: String): Boolean {
         if (mood.isBlank() || mood == "default" || mood == "all") return true
         val b = bpm ?: 120f
@@ -39,6 +46,7 @@ data class TrackDto(
         }
     }
     fun getCoverUrl(baseUrl: String, token: String = "", size: Int? = null): String {
+        if (!coverUrl.isNullOrBlank()) return coverUrl
         val clean = baseUrl.trim().removeSuffix("/")
         val base = "$clean/api/covers/$id"
         val params = mutableListOf<String>()
@@ -46,6 +54,44 @@ data class TrackDto(
         if (size != null && size > 0) params.add("size=$size")
         return if (params.isNotEmpty()) "$base?${params.joinToString("&")}" else base
     }
+}
+
+/**
+ * Создает TrackDto из произвольного словаря кандидата поисковых плагинов без жестких зависимостей
+ */
+fun candidateToTrackDto(candidate: Map<String, Any?>): TrackDto {
+    val cid = (candidate["candidate_id"] ?: candidate["id"] ?: candidate["url"] ?: "").toString()
+    val hash = cid.hashCode().let { if (it == 0) 1 else it }
+    val previewId = -kotlin.math.abs(hash)
+    val title = (candidate["title"] as? String)?.takeIf { it.isNotBlank() } ?: "Без названия"
+    val artist = (candidate["artist"] as? String)?.takeIf { it.isNotBlank() } ?: "Неизвестный исполнитель"
+    val album = candidate["album"] as? String
+        ?: candidate["source_name"] as? String
+        ?: candidate["source"] as? String
+        ?: "Онлайн поиск"
+    val dur = when (val d = candidate["duration"]) {
+        is Number -> d.toDouble()
+        is String -> d.toDoubleOrNull() ?: 0.0
+        else -> 0.0
+    }
+    val format = (candidate["format"] as? String ?: candidate["audio_format"] as? String)?.lowercase() ?: "mp3"
+    val bitrate = (candidate["bitrate"] as? Number)?.toInt()
+    val coverUrl = candidate["cover_url"] as? String
+        ?: candidate["cover"] as? String
+        ?: candidate["artwork"] as? String
+
+    return TrackDto(
+        id = previewId,
+        title = title,
+        artist = artist,
+        album = album,
+        duration = dur,
+        audioFormat = format,
+        bitrate = bitrate,
+        isPreview = true,
+        candidateId = cid,
+        coverUrl = coverUrl
+    )
 }
 
 data class ArtistDto(

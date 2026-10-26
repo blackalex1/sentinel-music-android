@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.sentinel.music.data.model.candidateToTrackDto
 
 class CandidateParsingTest {
 
@@ -91,5 +92,51 @@ class CandidateParsingTest {
         assertEquals(2, filterCandidates(candidates, "source_a").size)
         assertEquals(1, filterCandidates(candidates, "source_b").size)
         assertEquals(2, filterCandidates(candidates, "source_c").size)
+    }
+
+    @Test
+    fun testCandidateToTrackDtoMapping() {
+        val cand = mapOf<String, Any?>(
+            "candidate_id" to "cand_abc_123",
+            "title" to "Candidate Song",
+            "artist" to "Cool Artist",
+            "source" to "PluginSource",
+            "duration" to 185.5,
+            "format" to "FLAC",
+            "bitrate" to 960,
+            "cover_url" to "https://example.com/cover.jpg"
+        )
+
+        val trackDto = candidateToTrackDto(cand)
+
+        assertTrue("Preview track ID must be negative to avoid collision with DB IDs", trackDto.id < 0)
+        assertTrue("isPreview must be true for candidates", trackDto.isPreview)
+        assertEquals("cand_abc_123", trackDto.candidateId)
+        assertEquals("Candidate Song", trackDto.title)
+        assertEquals("Cool Artist", trackDto.artist)
+        assertEquals("PluginSource", trackDto.album)
+        assertEquals(185.5, trackDto.duration, 0.001)
+        assertEquals("flac", trackDto.audioFormat)
+        assertEquals(960, trackDto.bitrate)
+        assertEquals("https://example.com/cover.jpg", trackDto.coverUrl)
+    }
+
+    @Test
+    fun testCandidateToTrackDtoDurationAndDefaults() {
+        val cand = mapOf<String, Any?>(
+            "id" to "fallback_id_456",
+            "duration" to "120.0"
+        )
+
+        val trackDto = candidateToTrackDto(cand)
+
+        assertTrue(trackDto.id < 0)
+        assertEquals("fallback_id_456", trackDto.candidateId)
+        assertEquals("Без названия", trackDto.title)
+        assertEquals("Неизвестный исполнитель", trackDto.artist)
+        assertEquals("Онлайн поиск", trackDto.album)
+        assertEquals(120.0, trackDto.duration, 0.001)
+        assertEquals("mp3", trackDto.audioFormat)
+        assertTrue(trackDto.isPreview)
     }
 }

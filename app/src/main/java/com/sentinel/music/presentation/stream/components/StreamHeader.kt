@@ -153,7 +153,7 @@ fun StreamHeader(
             modifier = Modifier.padding(top = 2.dp)
         )
 
-        if (currentTrack?.audioFormat?.equals("flac", ignoreCase = true) == true) {
+        if (currentTrack?.safeAudioFormat?.equals("flac", ignoreCase = true) == true) {
             Surface(
                 color = Color(0xFF1DB954),
                 shape = RoundedCornerShape(4.dp),

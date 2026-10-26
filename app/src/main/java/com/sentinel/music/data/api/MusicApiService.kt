@@ -71,6 +71,12 @@ interface MusicApiService {
     @GET("/api/tracks/{id}")
     suspend fun getTrack(@Path("id") id: Int): TrackDto
 
+    @DELETE("/api/tracks/{id}")
+    suspend fun deleteTrack(
+        @Path("id") id: Int,
+        @Query("delete_file") deleteFile: Boolean = true
+    ): Map<String, Any?>
+
     @GET("/api/lyrics/{id}")
     suspend fun getLyrics(@Path("id") id: Int): LyricsResponse
 

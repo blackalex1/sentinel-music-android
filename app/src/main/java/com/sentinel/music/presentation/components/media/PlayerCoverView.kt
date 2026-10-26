@@ -93,14 +93,15 @@ fun PlayerCoverView(
                     serverUrl = serverUrl,
                     token = token,
                     size = coverSize,
-                    shapeRadius = 18.dp
+                    shapeRadius = 18.dp,
+                    customCoverUrl = track.coverUrl
                 )
             }
 
             Spacer(Modifier.height(10.dp))
 
             Text(
-                text = track.title,
+                text = track.safeTitle,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -113,7 +114,7 @@ fun PlayerCoverView(
             Spacer(Modifier.height(3.dp))
 
             Text(
-                text = track.artist,
+                text = track.safeArtist,
                 fontSize = 15.sp,
                 color = Color.LightGray,
                 maxLines = 1,
@@ -135,32 +136,32 @@ fun PlayerCoverView(
 
             Spacer(Modifier.height(10.dp))
 
-        // Кнопка быстрого открытия текста караоке
-        Surface(
-            onClick = onOpenLyrics,
-            shape = CircleShape,
-            color = Color(0x228A2BE2),
-            border = BorderStroke(1.dp, Color(0x558A2BE2))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Кнопка быстрого открытия текста караоке
+            Surface(
+                onClick = onOpenLyrics,
+                shape = CircleShape,
+                color = Color(0x228A2BE2),
+                border = BorderStroke(1.dp, Color(0x558A2BE2))
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Lyrics,
-                    contentDescription = null,
-                    tint = Color(0xFFD8B4FE),
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "Текст песни и караоке",
-                    color = Color(0xFFE9D5FF),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Lyrics,
+                        contentDescription = null,
+                        tint = Color(0xFFD8B4FE),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Текст песни и караоке",
+                        color = Color(0xFFE9D5FF),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
-}
 }

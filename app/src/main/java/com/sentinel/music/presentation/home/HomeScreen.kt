@@ -39,10 +39,12 @@ fun HomeScreen(
     onMoodClick: (String) -> Unit = {},
     onPlayMoodMix: (String) -> Unit = {},
     onLikeTrack: (TrackDto) -> Unit,
+    onPlayNextClick: ((TrackDto) -> Unit)? = null,
     onAddToPlaylistClick: ((TrackDto) -> Unit)? = null,
     onReplaceTrackClick: ((TrackDto) -> Unit)? = null,
     onDownloadTrack: ((TrackDto) -> Unit)? = null,
-    onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null
+    onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null,
+    onDeleteFromServerClick: ((TrackDto) -> Unit)? = null
 ) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -104,10 +106,12 @@ fun HomeScreen(
                     token = token,
                     onClick = { onTrackClick(track, upcoming) },
                     onLikeClick = { onLikeTrack(track) },
+                    onPlayNextClick = onPlayNextClick,
                     onAddToPlaylistClick = onAddToPlaylistClick,
                     onReplaceTrackClick = onReplaceTrackClick,
                     onDownloadTrack = onDownloadTrack,
-                    onDeleteDownloadedTrack = onDeleteDownloadedTrack
+                    onDeleteDownloadedTrack = onDeleteDownloadedTrack,
+                    onDeleteFromServerClick = onDeleteFromServerClick
                 )
             }
         }

@@ -42,10 +42,12 @@ fun PlaylistsScreen(
     currentTrack: TrackDto?,
     downloadedTrackIds: Set<Int> = emptySet(),
     downloadingTrackIds: Set<Int> = emptySet(),
+    onPlayNextClick: ((TrackDto) -> Unit)? = null,
     onAddToPlaylistClick: ((TrackDto) -> Unit)? = null,
     onReplaceTrackClick: ((TrackDto) -> Unit)? = null,
     onDownloadTrack: ((TrackDto) -> Unit)? = null,
-    onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null
+    onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null,
+    onDeleteFromServerClick: ((TrackDto) -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     var playlists by remember { mutableStateOf<List<PlaylistDto>>(emptyList()) }
@@ -213,10 +215,12 @@ fun PlaylistsScreen(
                             TrackActionDropdown(
                                 track = track,
                                 isDownloaded = isDownloaded,
+                                onPlayNextClick = onPlayNextClick,
                                 onAddToPlaylistClick = onAddToPlaylistClick,
                                 onReplaceTrackClick = onReplaceTrackClick,
                                 onDownloadTrack = onDownloadTrack,
-                                onDeleteDownloadedTrack = onDeleteDownloadedTrack
+                                onDeleteDownloadedTrack = onDeleteDownloadedTrack,
+                                onDeleteFromServerClick = onDeleteFromServerClick
                             )
                         }
                         HorizontalDivider(color = Color(0xFF1E1E1E))

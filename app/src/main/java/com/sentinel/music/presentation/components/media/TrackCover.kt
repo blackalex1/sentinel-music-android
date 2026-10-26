@@ -33,13 +33,16 @@ fun TrackCover(
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
     shapeRadius: Dp = 8.dp,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    customCoverUrl: String? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
 
-    val coverUrl = remember(trackId, serverUrl, token, size) {
-        if (trackId == null || trackId <= 0 || serverUrl.isBlank()) {
+    val coverUrl = remember(trackId, serverUrl, token, size, customCoverUrl) {
+        if (!customCoverUrl.isNullOrBlank()) {
+            customCoverUrl
+        } else if (trackId == null || trackId <= 0 || serverUrl.isBlank()) {
             null
         } else {
             val clean = serverUrl.trim().removeSuffix("/")

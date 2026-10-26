@@ -1,5 +1,6 @@
 package com.sentinel.music.player
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -25,6 +26,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import com.sentinel.music.MainActivity
 import com.sentinel.music.R
 import com.sentinel.music.data.api.NetworkClient
 import com.sentinel.music.data.session.SessionManager
@@ -273,7 +275,7 @@ class MusicService : MediaSessionService() {
             }
 
             val currentMediaId = session.player.currentMediaItem?.mediaId?.toIntOrNull()
-            if (currentMediaId != null) {
+            if (currentMediaId != null && currentMediaId > 0) {
                 when (customCommand.customAction) {
                     ACTION_LIKE -> {
                         serviceScope.launch {
@@ -874,7 +876,18 @@ class MusicService : MediaSessionService() {
             }
         })
 
+        val sessionIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val sessionActivityPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            sessionIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         mediaSession = MediaSession.Builder(this, player)
+            .setSessionActivity(sessionActivityPendingIntent)
             .setCallback(sessionCallback)
             .setBitmapLoader(bitmapLoader)
             .setCustomLayout(createNotificationButtons(isLiked = false, isDisliked = false))

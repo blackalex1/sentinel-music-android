@@ -36,6 +36,7 @@ class ReactionsModule(
 
     fun toggleLike(targetTrack: TrackDto? = null) {
         val tr = targetTrack ?: uiStateFlow.value.currentTrack ?: return
+        if (tr.id <= 0 || tr.isPreview) return
         scope.launch {
             try {
                 val res = withContext(Dispatchers.IO) {
@@ -60,6 +61,7 @@ class ReactionsModule(
 
     fun toggleDislike(targetTrack: TrackDto? = null) {
         val tr = targetTrack ?: uiStateFlow.value.currentTrack ?: return
+        if (tr.id <= 0 || tr.isPreview) return
         scope.launch {
             try {
                 val res = withContext(Dispatchers.IO) {

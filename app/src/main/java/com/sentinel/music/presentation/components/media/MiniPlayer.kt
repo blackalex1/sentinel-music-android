@@ -105,7 +105,8 @@ fun MiniPlayer(
                     serverUrl = serverUrl,
                     token = token,
                     size = 46.dp,
-                    shapeRadius = 8.dp
+                    shapeRadius = 8.dp,
+                    customCoverUrl = track.coverUrl
                 )
 
                 Spacer(Modifier.width(12.dp))
@@ -162,11 +163,14 @@ fun MiniPlayer(
                 }
 
                 // Кнопка Like
-                IconButton(onClick = onLike) {
+                IconButton(
+                    onClick = onLike,
+                    enabled = !track.isPreview
+                ) {
                     Icon(
                         imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = "Лайк",
-                        tint = if (isLiked) Color(0xFFFF3366) else Color.Gray,
+                        tint = if (isLiked) Color(0xFFFF3366) else Color.Gray.copy(alpha = if (track.isPreview) 0.3f else 1f),
                         modifier = Modifier.size(24.dp)
                     )
                 }

@@ -90,13 +90,15 @@ class OfflineManager(
         } catch (_: Exception) {}
     }
 
-    fun getLocalAudioFile(trackId: Int, format: String): File {
-        return File(offlineAudioDir, "$trackId.$format")
+    fun getLocalAudioFile(trackId: Int, format: String? = null): File {
+        val safeFmt = format?.takeIf { it.isNotBlank() } ?: "mp3"
+        return File(offlineAudioDir, "$trackId.$safeFmt")
     }
 
-    fun isTrackDownloaded(trackId: Int, format: String = ""): Boolean {
-        if (format.isNotEmpty()) {
-            val fileName = "$trackId.$format"
+    fun isTrackDownloaded(trackId: Int, format: String? = null): Boolean {
+        val safeFmt = format?.takeIf { it.isNotBlank() }
+        if (!safeFmt.isNullOrEmpty()) {
+            val fileName = "$trackId.$safeFmt"
             if (downloadedCache[fileName] == true) return true
         }
         return _downloadedTrackIds.value.contains(trackId)
@@ -107,8 +109,9 @@ class OfflineManager(
      * - Если трек уже сохранен на телефоне: локальный файл (без интернета).
      * - Иначе: защищенный стриминг с сервера с токеном авторизации.
      */
-    fun getPlaybackUri(trackId: Int, format: String, token: String = ""): Uri {
-        val localFile = getLocalAudioFile(trackId, format)
+    fun getPlaybackUri(trackId: Int, format: String? = null, token: String = ""): Uri {
+        val safeFmt = format?.takeIf { it.isNotBlank() } ?: "mp3"
+        val localFile = getLocalAudioFile(trackId, safeFmt)
         if (localFile.exists() && localFile.length() > 0) {
             return Uri.fromFile(localFile)
         }
@@ -132,14 +135,15 @@ class OfflineManager(
         if (!force && !isDownloadModeEnabled) return@withContext false
         if (downloadOnlyOnWifi && !isWifiConnected()) return@withContext false
 
-        val targetFile = getLocalAudioFile(track.id, track.audioFormat)
+        val safeFmt = track.safeAudioFormat
+        val targetFile = getLocalAudioFile(track.id, safeFmt)
         if (targetFile.exists() && targetFile.length() > 0) {
             downloadedCache[targetFile.name] = true
             _downloadedTrackIds.update { it + track.id }
             return@withContext true
         }
 
-        val tempFile = File(offlineAudioDir, "${track.id}.${track.audioFormat}.tmp")
+        val tempFile = File(offlineAudioDir, "${track.id}.$safeFmt.tmp")
         _downloadingTrackIds.update { it + track.id }
 
         try {
@@ -188,9 +192,10 @@ class OfflineManager(
     /**
      * Удаляет конкретный трек из офлайн-кеша.
      */
-    fun deleteTrack(trackId: Int, format: String): Boolean {
+    fun deleteTrack(trackId: Int, format: String? = null): Boolean {
         var deletedAny = false
-        val targetFile = getLocalAudioFile(trackId, format)
+        val safeFmt = format?.takeIf { it.isNotBlank() } ?: "mp3"
+        val targetFile = getLocalAudioFile(trackId, safeFmt)
         if (targetFile.exists()) {
             if (targetFile.delete()) deletedAny = true
         }

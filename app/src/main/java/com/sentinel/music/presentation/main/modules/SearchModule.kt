@@ -189,9 +189,9 @@ class SearchModule(
         }
 
         scope.launch(Dispatchers.IO) {
-            val wasDownloaded = offlineManager.isTrackDownloaded(updatedTrack.id, updatedTrack.audioFormat)
+            val wasDownloaded = offlineManager.isTrackDownloaded(updatedTrack.id, updatedTrack.safeAudioFormat)
             if (wasDownloaded) {
-                offlineManager.deleteTrack(updatedTrack.id, updatedTrack.audioFormat)
+                offlineManager.deleteTrack(updatedTrack.id, updatedTrack.safeAudioFormat)
                 val token = sessionManager.token ?: ""
                 if (token.isNotEmpty()) {
                     offlineManager.downloadTrack(updatedTrack, token, force = true)

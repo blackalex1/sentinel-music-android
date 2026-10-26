@@ -105,7 +105,7 @@ fun ExpandedPlayerModal(
         ) {
             // 1. Верхняя панель (Свернуть + Формат + Очередь + Заменить + Текст/Обложка)
             PlayerHeader(
-                audioFormat = track.audioFormat,
+                audioFormat = track.safeAudioFormat,
                 showLyrics = showLyrics,
                 onDismiss = onDismiss,
                 onToggleLyrics = { showLyrics = !showLyrics },

@@ -38,10 +38,12 @@ fun RecentTrackRow(
     token: String,
     onClick: () -> Unit,
     onLikeClick: () -> Unit,
+    onPlayNextClick: ((TrackDto) -> Unit)? = null,
     onAddToPlaylistClick: ((TrackDto) -> Unit)? = null,
     onReplaceTrackClick: ((TrackDto) -> Unit)? = null,
     onDownloadTrack: ((TrackDto) -> Unit)? = null,
     onDeleteDownloadedTrack: ((TrackDto) -> Unit)? = null,
+    onDeleteFromServerClick: ((TrackDto) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -69,7 +71,7 @@ fun RecentTrackRow(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = track.title,
+                    text = track.safeTitle,
                     color = if (isPlayingCurrent) Color(0xFFBB86FC) else Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -78,14 +80,14 @@ fun RecentTrackRow(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = track.artist,
+                        text = track.safeArtist,
                         color = Color.Gray,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (track.audioFormat.equals("flac", ignoreCase = true)) {
+                    if (track.safeAudioFormat.equals("flac", ignoreCase = true)) {
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "FLAC",
@@ -117,14 +119,16 @@ fun RecentTrackRow(
                 )
             }
 
-            // Контекстное меню действий (Добавить в плейлист / Заменить трек / Скачать в кеш)
+            // Контекстное меню действий (Играть следующим / Добавить в плейлист / Заменить трек / Скачать в кеш / Удалить с сервера)
             TrackActionDropdown(
                 track = track,
                 isDownloaded = isDownloaded,
+                onPlayNextClick = onPlayNextClick,
                 onAddToPlaylistClick = onAddToPlaylistClick,
                 onReplaceTrackClick = onReplaceTrackClick,
                 onDownloadTrack = onDownloadTrack,
-                onDeleteDownloadedTrack = onDeleteDownloadedTrack
+                onDeleteDownloadedTrack = onDeleteDownloadedTrack,
+                onDeleteFromServerClick = onDeleteFromServerClick
             )
         }
 

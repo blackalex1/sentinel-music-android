@@ -58,6 +58,8 @@ class RemoteController(
     private val _remoteStatus = MutableStateFlow<com.sentinel.music.data.model.RemoteStatusResponse?>(null)
     val remoteStatus: StateFlow<com.sentinel.music.data.model.RemoteStatusResponse?> = _remoteStatus.asStateFlow()
 
+    var onCommandReceived: ((command: String, payload: JsonObject?) -> Unit)? = null
+
     fun start() {
         if (!_isConnected.value && webSocket == null) {
             connectWebSocket()
@@ -218,6 +220,14 @@ class RemoteController(
             when (type) {
                 "pong" -> {
                     // Сердечный ритм от сервера
+                }
+                "command" -> {
+                    val cmd = json.get("command")?.asString ?: return
+                    val payload = json.getAsJsonObject("payload")
+                    Log.i(tag, "Получена входящая команда управления: $cmd")
+                    scope.launch(Dispatchers.Main) {
+                        onCommandReceived?.invoke(cmd, payload)
+                    }
                 }
                 "welcome", "devices_update" -> {
                     val devicesArray = json.getAsJsonArray("devices")

@@ -9,6 +9,7 @@ import androidx.media3.session.MediaController
 import com.sentinel.music.data.api.MusicApiService
 import com.sentinel.music.data.model.RemoteDeviceDto
 import com.sentinel.music.data.model.TrackDto
+import com.sentinel.music.data.model.candidateToTrackDto
 import com.sentinel.music.data.remote.RemoteController
 import com.sentinel.music.data.repository.LyricsRepository
 import com.sentinel.music.data.repository.OfflineManager
@@ -153,7 +154,7 @@ class PlaybackModule(
             }
             if (uiStateFlow.value.preloadNextTrack && updatedQueue.isNotEmpty()) {
                 val nextInLine = updatedQueue.first()
-                if (uiStateFlow.value.isDownloadMode && !offlineManager.isTrackDownloaded(nextInLine.id, nextInLine.audioFormat)) {
+                if (uiStateFlow.value.isDownloadMode && !offlineManager.isTrackDownloaded(nextInLine.id, nextInLine.safeAudioFormat)) {
                     scope.launch(Dispatchers.IO) {
                         offlineManager.downloadTrack(nextInLine, token)
                     }
@@ -259,7 +260,7 @@ class PlaybackModule(
             .setExtras(extras)
             .build()
 
-        val playUri = offlineManager.getPlaybackUri(track.id, track.audioFormat, token)
+        val playUri = offlineManager.getPlaybackUri(track.id, track.safeAudioFormat, token)
         return MediaItem.Builder()
             .setUri(playUri)
             .setMediaId(track.id.toString())
@@ -389,6 +390,60 @@ class PlaybackModule(
         }
     }
 
+    fun playCandidatePreview(candidate: Map<String, Any?>) {
+        val cid = (candidate["candidate_id"] ?: candidate["id"] ?: candidate["url"] ?: "").toString()
+        if (cid.isBlank()) return
+
+        val state = uiStateFlow.value
+        val cur = state.currentTrack
+        if (cur != null && cur.isPreview && cur.candidateId == cid) {
+            playPause()
+            return
+        }
+
+        val track = candidateToTrackDto(candidate)
+        val token = sessionManager.token ?: ""
+        val serverUrl = sessionManager.serverUrl
+
+        val preservedQueue = state.queue
+        val mediaItem = buildMediaItem(track, token, serverUrl)
+
+        val controller = mediaController
+        if (controller != null) {
+            applyPlaybackToController(controller, listOf(mediaItem), 0L, autoPlay = true)
+            pendingPlayback = null
+        } else {
+            pendingPlayback = PendingPlayback(track, emptyList(), 0L, autoPlay = true)
+        }
+
+        val dur = (track.duration * 1000).toLong().coerceAtLeast(1L)
+        uiStateFlow.update {
+            it.copy(
+                activeDevice = null,
+                currentTrack = track,
+                isPlaying = true,
+                currentProgressMs = 0L,
+                durationMs = dur,
+                isLiked = false,
+                isDisliked = false,
+                queue = preservedQueue,
+                isStreamActive = false,
+                lyrics = emptyList()
+            )
+        }
+
+        remoteController.broadcastLocalState(
+            isPlaying = true,
+            currentTrack = track,
+            positionMs = 0L,
+            durationMs = dur,
+            queue = preservedQueue,
+            isShuffle = false,
+            repeatMode = "off",
+            force = true
+        )
+    }
+
     fun play() {
         val active = uiStateFlow.value.activeDevice
         if (active != null) {
@@ -404,7 +459,7 @@ class PlaybackModule(
             if (controller.currentMediaItem == null && state.currentTrack != null) {
                 val token = sessionManager.token ?: ""
                 val serverUrl = sessionManager.serverUrl
-                val allTracks = listOf(state.currentTrack) + state.queue
+                val allTracks = if (state.currentTrack.isPreview) listOf(state.currentTrack) else listOf(state.currentTrack) + state.queue
                 val mediaItems = allTracks.map { buildMediaItem(it, token, serverUrl) }
                 applyPlaybackToController(controller, mediaItems, state.currentProgressMs, autoPlay = true)
                 return
@@ -441,7 +496,7 @@ class PlaybackModule(
             if (controller.currentMediaItem == null && state.currentTrack != null) {
                 val token = sessionManager.token ?: ""
                 val serverUrl = sessionManager.serverUrl
-                val allTracks = listOf(state.currentTrack) + state.queue
+                val allTracks = if (state.currentTrack.isPreview) listOf(state.currentTrack) else listOf(state.currentTrack) + state.queue
                 val mediaItems = allTracks.map { buildMediaItem(it, token, serverUrl) }
                 applyPlaybackToController(controller, mediaItems, state.currentProgressMs, autoPlay = true)
                 return
@@ -583,6 +638,54 @@ class PlaybackModule(
                 mutable.removeAt(index)
                 current.copy(queue = mutable)
             } else current
+        }
+    }
+
+    fun playTrackNext(track: TrackDto) {
+        val active = uiStateFlow.value.activeDevice
+        if (active != null) {
+            val currentQueue = uiStateFlow.value.queue.filterNot { it.id == track.id }
+            val updatedQueue = listOf(track) + currentQueue
+            val curTrack = uiStateFlow.value.currentTrack ?: track
+            val fullQueue = listOf(curTrack) + updatedQueue
+            remoteController.playTrack(curTrack, queue = fullQueue, autoPlay = uiStateFlow.value.isPlaying)
+            val updatedDev = active.copy(queue = fullQueue)
+            uiStateFlow.update { it.copy(queue = updatedQueue, activeDevice = updatedDev) }
+            onSyncRemoteState(updatedDev)
+            return
+        }
+
+        val state = uiStateFlow.value
+        if (state.currentTrack == null) {
+            playTrack(track)
+            return
+        }
+
+        val currentQueue = state.queue.filterNot { it.id == track.id }
+        val updatedQueue = listOf(track) + currentQueue
+        uiStateFlow.update { it.copy(queue = updatedQueue) }
+
+        val controller = mediaController
+        if (controller != null) {
+            val token = sessionManager.token ?: ""
+            val serverUrl = sessionManager.serverUrl
+            val mediaItem = buildMediaItem(track, token, serverUrl)
+            val nextIdx = (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
+            controller.addMediaItem(nextIdx, mediaItem)
+        }
+
+        val cur = uiStateFlow.value
+        if (cur.currentTrack != null) {
+            remoteController.broadcastLocalState(
+                isPlaying = cur.isPlaying,
+                currentTrack = cur.currentTrack,
+                positionMs = controller?.currentPosition ?: cur.currentProgressMs,
+                durationMs = cur.durationMs,
+                queue = updatedQueue,
+                isShuffle = cur.isShuffleEnabled,
+                repeatMode = cur.repeatMode.name.lowercase(),
+                force = true
+            )
         }
     }
 

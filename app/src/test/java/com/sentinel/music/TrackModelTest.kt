@@ -79,4 +79,41 @@ class TrackModelTest {
         assertEquals("Song New", newCurrent.title)
         assertEquals("flac", newCurrent.audioFormat)
     }
+
+    @Test
+    fun testTrackDtoMissingAudioFormatFromGson() {
+        // Симуляция входящего объекта трека от Sentinel Connect (например, Яндекс Станция), где нет audio_format
+        val json = """
+            {
+                "id": 99,
+                "title": "Remote Song",
+                "artist": "Remote Artist",
+                "duration": 180.0
+            }
+        """.trimIndent()
+
+        val track = gson.fromJson(json, TrackDto::class.java)
+
+        assertNotNull(track)
+        assertEquals("mp3", track.safeAudioFormat)
+        assertEquals("Remote Song", track.safeTitle)
+        assertEquals("Remote Artist", track.safeArtist)
+    }
+
+    @Test
+    fun testTrackDtoExplicitNullAudioFormat() {
+        val json = """
+            {
+                "id": 100,
+                "title": "Null Format Song",
+                "artist": "Artist",
+                "audio_format": null
+            }
+        """.trimIndent()
+
+        val track = gson.fromJson(json, TrackDto::class.java)
+
+        assertNotNull(track)
+        assertEquals("mp3", track.safeAudioFormat)
+    }
 }

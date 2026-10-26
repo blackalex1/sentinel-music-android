@@ -1,6 +1,5 @@
 package com.sentinel.music.presentation.tracks
 
-import android.media.MediaPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -37,6 +36,9 @@ fun ReplaceTrackDialog(
     api: MusicApiService,
     serverUrl: String,
     token: String,
+    currentTrack: TrackDto? = null,
+    isPlaying: Boolean = false,
+    onPreviewCandidate: ((Map<String, Any?>) -> Unit)? = null,
     onDismiss: () -> Unit,
     onSuccess: (TrackDto) -> Unit
 ) {
@@ -48,20 +50,7 @@ fun ReplaceTrackDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var rawCandidates by remember { mutableStateOf<List<Map<String, Any?>>>(emptyList()) }
     var selectedFilter by remember { mutableStateOf("all") }
-
-    var previewPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-    var previewingCandidateId by remember { mutableStateOf<String?>(null) }
     var replacingCandidateId by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            try {
-                previewPlayer?.stop()
-                previewPlayer?.release()
-            } catch (_: Exception) {}
-            previewPlayer = null
-        }
-    }
 
     fun loadCandidates() {
         isLoading = true
@@ -87,61 +76,10 @@ fun ReplaceTrackDialog(
         loadCandidates()
     }
 
-    fun togglePreview(candId: String) {
-        if (previewingCandidateId == candId) {
-            try {
-                previewPlayer?.stop()
-                previewPlayer?.release()
-            } catch (_: Exception) {}
-            previewPlayer = null
-            previewingCandidateId = null
-            return
-        }
-
-        try {
-            previewPlayer?.stop()
-            previewPlayer?.release()
-        } catch (_: Exception) {}
-        previewPlayer = null
-        previewingCandidateId = null
-
-        val cleanUrl = serverUrl.trim().removeSuffix("/")
-        val streamUrl = "$cleanUrl/api/tracks/candidates/preview?candidate_id=$candId&token=$token"
-
-        try {
-            val mp = MediaPlayer().apply {
-                setDataSource(streamUrl)
-                setOnPreparedListener { it.start() }
-                setOnCompletionListener {
-                    previewingCandidateId = null
-                    try { it.release() } catch (_: Exception) {}
-                    previewPlayer = null
-                }
-                setOnErrorListener { _, _, _ ->
-                    previewingCandidateId = null
-                    try { previewPlayer?.release() } catch (_: Exception) {}
-                    previewPlayer = null
-                    true
-                }
-                prepareAsync()
-            }
-            previewPlayer = mp
-            previewingCandidateId = candId
-        } catch (e: Exception) {
-            e.printStackTrace()
-            previewingCandidateId = null
-        }
-    }
-
     fun replaceWith(cand: Map<String, Any?>) {
         val cid = cand["candidate_id"] as? String ?: return
         replacingCandidateId = cid
-        try {
-            previewPlayer?.stop()
-            previewPlayer?.release()
-        } catch (_: Exception) {}
-        previewPlayer = null
-        previewingCandidateId = null
+        
 
         coroutineScope.launch {
             try {
@@ -378,7 +316,7 @@ fun ReplaceTrackDialog(
                             }
 
                             val canPreview = cand["can_preview"] as? Boolean ?: true
-                            val isPlayingThis = previewingCandidateId == cid
+                            val isPlayingThis = currentTrack?.isPreview == true && currentTrack.candidateId == cid && isPlaying
                             val isReplacingThis = replacingCandidateId == cid
 
                             // Карточка версии-кандидата
@@ -463,7 +401,7 @@ fun ReplaceTrackDialog(
                                     ) {
                                         if (canPreview) {
                                             OutlinedButton(
-                                                onClick = { togglePreview(cid) },
+                                                onClick = { onPreviewCandidate?.invoke(cand) },
                                                 shape = RoundedCornerShape(8.dp),
                                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                                 modifier = Modifier.height(34.dp),

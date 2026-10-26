@@ -49,7 +49,7 @@ class DownloadStorageModule(
 
     fun deleteDownloadedTrack(track: TrackDto) {
         scope.launch(Dispatchers.IO) {
-            offlineManager.deleteTrack(track.id, track.audioFormat)
+            offlineManager.deleteTrack(track.id, track.safeAudioFormat)
             refreshStorageStats()
         }
     }
@@ -60,7 +60,7 @@ class DownloadStorageModule(
         val token = sessionManager.token ?: ""
         val library = uiStateFlow.value.tracks
         val candidates = if (onlyLiked) library.filter { it.isLiked } else library
-        val missing = candidates.filter { !offlineManager.isTrackDownloaded(it.id, it.audioFormat) }
+        val missing = candidates.filter { !offlineManager.isTrackDownloaded(it.id, it.safeAudioFormat) }
 
         if (missing.isEmpty()) {
             uiStateFlow.update { it.copy(errorMessage = "Все выбранные треки уже скачаны в кеш") }

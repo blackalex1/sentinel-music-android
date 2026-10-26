@@ -6,6 +6,8 @@ import androidx.media3.session.MediaController
 import com.sentinel.music.data.api.MusicApiService
 import com.sentinel.music.data.model.RemoteDeviceDto
 import com.sentinel.music.data.model.TrackDto
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.sentinel.music.data.remote.RemoteController
 import com.sentinel.music.data.repository.LyricsRepository
 import com.sentinel.music.data.repository.OfflineManager
@@ -21,11 +23,13 @@ import com.sentinel.music.presentation.main.modules.RemoteModule
 import com.sentinel.music.presentation.main.modules.SearchModule
 import com.sentinel.music.presentation.main.modules.StreamModule
 import com.sentinel.music.presentation.navigation.MainTab
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Главная ViewModel экрана приложения.
@@ -152,6 +156,9 @@ class MainViewModel(
         libraryLoaderModule.loadInitialData()
         playbackModule.startProgressPolling()
         remoteController.start()
+        remoteController.onCommandReceived = { cmd, payload ->
+            handleInboundRemoteCommand(cmd, payload)
+        }
 
         viewModelScope.launch {
             remoteController.devices.collect { devs ->
@@ -335,6 +342,9 @@ class MainViewModel(
     fun bindController(controller: MediaController?) = playbackModule.bindController(controller)
     fun playTrack(track: TrackDto, upcomingList: List<TrackDto>? = null, isFromStream: Boolean = false) =
         playbackModule.playTrack(track, upcomingList, isFromStream)
+    fun playTrackNext(track: TrackDto) = playbackModule.playTrackNext(track)
+    fun playCandidatePreview(candidate: Map<String, Any?>) =
+        playbackModule.playCandidatePreview(candidate)
     fun play() = playbackModule.play()
     fun pause() = playbackModule.pause()
     fun playPause() = playbackModule.playPause()
@@ -375,6 +385,48 @@ class MainViewModel(
     fun downloadTrack(track: TrackDto, onComplete: ((Boolean) -> Unit)? = null) =
         downloadStorageModule.downloadTrack(track, onComplete)
     fun deleteDownloadedTrack(track: TrackDto) = downloadStorageModule.deleteDownloadedTrack(track)
+    fun deleteTrackFromServer(
+        track: TrackDto,
+        deleteFile: Boolean = true,
+        onComplete: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    api.deleteTrack(track.id, deleteFile = deleteFile)
+                }
+                _uiState.update { current ->
+                    current.copy(
+                        tracks = current.tracks.filterNot { it.id == track.id },
+                        recentTracks = current.recentTracks.filterNot { it.id == track.id },
+                        searchResults = current.searchResults.filterNot { it.id == track.id },
+                        queue = current.queue.filterNot { it.id == track.id }
+                    )
+                }
+                if (offlineManager.isTrackDownloaded(track.id, track.safeAudioFormat)) {
+                    deleteDownloadedTrack(track)
+                }
+                if (_uiState.value.currentTrack?.id == track.id) {
+                    if (_uiState.value.queue.isNotEmpty()) {
+                        playNext()
+                    } else {
+                        pause()
+                        _uiState.update { it.copy(currentTrack = null) }
+                    }
+                }
+                onComplete(true, "Трек «${track.title}» удален с сервера")
+            } catch (e: retrofit2.HttpException) {
+                val msg = if (e.code() == 403) {
+                    "Ошибка 403: требуются права администратора для удаления с сервера"
+                } else {
+                    "Ошибка ${e.code()}: не удалось удалить трек"
+                }
+                onComplete(false, msg)
+            } catch (e: Exception) {
+                onComplete(false, e.localizedMessage ?: "Сбой при удалении трека")
+            }
+        }
+    }
     fun startFullDownload(onlyLiked: Boolean = false) = downloadStorageModule.startFullDownload(onlyLiked)
     fun cancelFullDownload() = downloadStorageModule.cancelFullDownload()
     fun setDownloadOnlyOnWifi(enabled: Boolean) = downloadStorageModule.setDownloadOnlyOnWifi(enabled)
@@ -416,6 +468,98 @@ class MainViewModel(
             isEnabled: Boolean = true,
             targetLufs: Float = -14.0f
         ): Float = DspModule.calculateNormalizedVolume(gainDb, isEnabled, targetLufs)
+    }
+
+    private fun handleInboundRemoteCommand(cmd: String, payload: JsonObject?) {
+        val upperCmd = cmd.uppercase()
+        android.util.Log.i("MainViewModel", "Выполнение входящей команды управления: $upperCmd")
+        when (upperCmd) {
+            "TOGGLE_PLAY" -> {
+                playbackModule.playPause()
+            }
+            "PLAY" -> {
+                playbackModule.play()
+            }
+            "PAUSE" -> {
+                playbackModule.pause()
+            }
+            "NEXT" -> {
+                playbackModule.playNext()
+            }
+            "PREV" -> {
+                playbackModule.playPrev()
+            }
+            "SEEK" -> {
+                val posMs = payload?.get("position_ms")?.asLong
+                    ?: (payload?.get("position_seconds")?.asDouble?.times(1000))?.toLong()
+                if (posMs != null) {
+                    playbackModule.seekTo(posMs)
+                }
+            }
+            "SET_VOLUME" -> {
+                val vol = payload?.get("volume")?.asFloat
+                if (vol != null) {
+                    playbackModule.mediaController?.volume = vol.coerceIn(0f, 1f)
+                }
+            }
+            "SHUFFLE" -> {
+                playbackModule.toggleShuffleMode()
+            }
+            "REPEAT" -> {
+                playbackModule.toggleRepeatMode()
+            }
+            "PLAY_TRACK", "PREPARE_TRACK", "TRANSFER_PLAYBACK" -> {
+                val trackJson = payload?.get("track")
+                val autoPlay = if (upperCmd == "PLAY_TRACK") {
+                    payload?.get("auto_play")?.asBoolean ?: true
+                } else {
+                    payload?.get("auto_play")?.asBoolean ?: false
+                }
+                val posMs = payload?.get("position_ms")?.asLong
+                    ?: (payload?.get("position_seconds")?.asDouble?.times(1000))?.toLong()
+                    ?: 0L
+                val queueJson = payload?.getAsJsonArray("queue")
+                val gson = Gson()
+                val queue = if (queueJson != null) {
+                    val qList = mutableListOf<TrackDto>()
+                    for (el in queueJson) {
+                        try {
+                            val t = gson.fromJson(el, TrackDto::class.java)
+                            if (t != null) qList.add(t)
+                        } catch (_: Exception) {}
+                    }
+                    qList
+                } else null
+
+                if (trackJson != null) {
+                    try {
+                        val track = gson.fromJson(trackJson, TrackDto::class.java)
+                        if (track != null) {
+                            if (_uiState.value.activeDevice != null) {
+                                _uiState.update { it.copy(activeDevice = null) }
+                                remoteController.selectDevice(null)
+                            }
+                            playbackModule.prepareLocalPlayback(
+                                track = track,
+                                upcomingList = queue,
+                                startPositionMs = posMs,
+                                autoPlay = autoPlay
+                            )
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainViewModel", "Ошибка разбора трека для удаленного воспроизведения: ${e.message}")
+                    }
+                }
+            }
+            "SET_REACTION" -> {
+                val trackId = payload?.get("track_id")?.asInt
+                val isLiked = payload?.get("is_liked")?.asBoolean ?: false
+                val isDisliked = payload?.get("is_disliked")?.asBoolean ?: false
+                if (trackId != null) {
+                    reactionsModule.updateTrackReaction(trackId, isLiked, isDisliked)
+                }
+            }
+        }
     }
 
     override fun onCleared() {
