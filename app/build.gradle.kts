@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val versionFile = rootProject.file("VERSION")
+val appVersionName: String = if (versionFile.exists()) versionFile.readText().trim() else "0.0.3"
+val semverParts = appVersionName.removePrefix("v").split(".").mapNotNull { it.toIntOrNull() }
+val appVersionCode: Int = if (semverParts.size >= 3) {
+    semverParts[0] * 10000 + semverParts[1] * 100 + semverParts[2]
+} else 3
+
 android {
     namespace = "com.sentinel.music"
     compileSdk = 35
@@ -11,8 +18,8 @@ android {
         applicationId = "com.sentinel.music"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.0.3"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
