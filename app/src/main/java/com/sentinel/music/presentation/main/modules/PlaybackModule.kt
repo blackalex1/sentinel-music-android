@@ -394,6 +394,30 @@ class PlaybackModule(
         if (isFromStream) {
             uiStateFlow.update { it.copy(isStreamActive = true) }
         }
+
+        if (uiStateFlow.value.isShuffleEnabled && !isFromStream) {
+            initServerShuffleQueue(track)
+        }
+    }
+
+    fun initServerShuffleQueue(seedTrack: TrackDto) {
+        if (!uiStateFlow.value.isShuffleEnabled || uiStateFlow.value.isStreamActive) return
+        scope.launch {
+            try {
+                val shuffled = withContext(Dispatchers.IO) {
+                    api.getShuffledTracks(limit = 50, excludeIds = seedTrack.id.toString())
+                }
+                if (shuffled.isNotEmpty() && uiStateFlow.value.isShuffleEnabled && uiStateFlow.value.currentTrack?.id == seedTrack.id) {
+                    val filtered = shuffled.filterNot { it.id == seedTrack.id }
+                    uiStateFlow.update { it.copy(queue = filtered) }
+                    val active = uiStateFlow.value.activeDevice
+                    if (active != null) {
+                        remoteController.setQueue(listOf(seedTrack) + filtered, seedTrack.id)
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun playCandidatePreview(candidate: Map<String, Any?>) {
@@ -565,7 +589,43 @@ class PlaybackModule(
                 }
                 val remaining = state.queue.filterNot { it.id == nextTrack.id }
                 playTrack(nextTrack, upcomingList = remaining, isFromStream = false)
+
+                // Если в режиме перемешивания очередь подходит к концу — подтягиваем случайные треки с сервера
+                if (state.isShuffleEnabled && remaining.size <= 2) {
+                    scope.launch {
+                        try {
+                            val more = withContext(Dispatchers.IO) {
+                                api.getShuffledTracks(limit = 30, excludeIds = nextTrack.id.toString())
+                            }
+                            if (more.isNotEmpty() && uiStateFlow.value.isShuffleEnabled) {
+                                val currentQ = uiStateFlow.value.queue
+                                val existingIds = currentQ.map { it.id }.toSet()
+                                val fresh = more.filterNot { existingIds.contains(it.id) }
+                                if (fresh.isNotEmpty()) {
+                                    uiStateFlow.update { it.copy(queue = currentQ + fresh) }
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
                 return
+            }
+
+            // Если очередь пуста и включен Shuffle — берем случайные треки со всего сервера
+            if (state.isShuffleEnabled) {
+                scope.launch {
+                    try {
+                        val shuffled = withContext(Dispatchers.IO) {
+                            api.getShuffledTracks(limit = 50, excludeIds = state.currentTrack?.id?.toString())
+                        }
+                        if (shuffled.isNotEmpty()) {
+                            val next = shuffled.first()
+                            val remaining = shuffled.drop(1)
+                            playTrack(next, upcomingList = remaining, isFromStream = false)
+                            return@launch
+                        }
+                    } catch (_: Exception) {}
+                }
             }
 
             val list = state.tracks

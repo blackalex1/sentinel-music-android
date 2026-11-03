@@ -68,6 +68,13 @@ interface MusicApiService {
         @Query("offset") offset: Int = 0
     ): List<TrackDto>
 
+    @GET("/api/tracks/shuffle")
+    suspend fun getShuffledTracks(
+        @Query("limit") limit: Int = 50,
+        @Query("mood") mood: String? = null,
+        @Query("exclude_ids") excludeIds: String? = null
+    ): List<TrackDto>
+
     @GET("/api/tracks/{id}")
     suspend fun getTrack(@Path("id") id: Int): TrackDto
 

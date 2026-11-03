@@ -379,6 +379,10 @@ class RemoteController(
             }
         }
     }
+    fun setQueue(queue: List<TrackDto>, trackId: Int = 0) = sendCommand("SET_QUEUE", mapOf(
+        "queue" to queue,
+        "track_id" to trackId
+    ))
     fun toggleShuffle() = sendCommand("SHUFFLE")
     fun toggleRepeat() = sendCommand("REPEAT")
 
