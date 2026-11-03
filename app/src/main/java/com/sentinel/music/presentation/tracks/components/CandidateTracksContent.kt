@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -218,7 +219,13 @@ fun CandidateTracksContent(
                 contentPadding = PaddingValues(bottom = 100.dp, top = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filteredCandidates, key = { it["candidate_id"] as? String ?: it.hashCode().toString() }) { cand ->
+                itemsIndexed(
+                    items = filteredCandidates,
+                    key = { index, cand ->
+                        val cid = cand["candidate_id"] as? String ?: cand["id"] as? String ?: cand.hashCode().toString()
+                        "${cid}_$index"
+                    }
+                ) { _, cand ->
                     val cid = cand["candidate_id"] as? String ?: ""
                     val isPlayingThis = currentTrack?.isPreview == true && currentTrack.candidateId == cid && isPlaying
                     val isDownloadingThis = downloadingCandidateIds.contains(cid)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -289,7 +290,13 @@ fun ReplaceTrackDialog(
                             .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredCandidates, key = { it["candidate_id"] as? String ?: it.hashCode().toString() }) { cand ->
+                        itemsIndexed(
+                            items = filteredCandidates,
+                            key = { index, item ->
+                                val cid = item["candidate_id"] as? String ?: item["id"] as? String ?: item.hashCode().toString()
+                                "${cid}_$index"
+                            }
+                        ) { _, cand ->
                             val cid = cand["candidate_id"] as? String ?: ""
                             val cTitle = cand["title"] as? String ?: track.title
                             val cArtist = cand["artist"] as? String ?: track.artist

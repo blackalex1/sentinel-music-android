@@ -324,7 +324,13 @@ class RemoteController(
     ))
     fun playTrack(track: TrackDto, positionSeconds: Double? = null, queue: List<TrackDto>? = null, autoPlay: Boolean = true) = sendCommand(
         "PLAY_TRACK",
-        mutableMapOf<String, Any?>("track" to track, "auto_play" to autoPlay).apply {
+        mutableMapOf<String, Any?>(
+            "track" to track,
+            "auto_play" to autoPlay,
+            "is_preview" to track.isPreview,
+            "candidate_id" to track.candidateId,
+            "cover_url" to track.coverUrl
+        ).apply {
             if (positionSeconds != null) put("position_seconds", positionSeconds)
             if (queue != null) put("queue", queue)
         }
@@ -342,7 +348,10 @@ class RemoteController(
             "queue" to queue,
             "position_ms" to positionMs,
             "position_seconds" to (positionMs / 1000.0),
-            "auto_play" to autoPlay
+            "auto_play" to autoPlay,
+            "is_preview" to track.isPreview,
+            "candidate_id" to track.candidateId,
+            "cover_url" to track.coverUrl
         )
         val msg = JsonObject().apply {
             addProperty("action", "command")

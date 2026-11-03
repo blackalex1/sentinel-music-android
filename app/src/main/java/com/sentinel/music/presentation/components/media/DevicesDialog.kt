@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -117,7 +118,7 @@ fun DevicesDialog(
                     }
 
                     // 2. Список удаленных устройств (ПК, браузеры)
-                    items(availableDevices, key = { it.id }) { dev ->
+                    itemsIndexed(availableDevices, key = { index, dev -> "${dev.id}_$index" }) { _, dev ->
                         val isSelected = activeDevice?.id == dev.id
                         val desc = if (dev.isPlaying && dev.currentTrack != null) {
                             "Сейчас играет: ${dev.currentTrack.artist} - ${dev.currentTrack.title}"

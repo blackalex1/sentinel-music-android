@@ -132,7 +132,8 @@ fun QueueBottomSheet(
                                 serverUrl = serverUrl,
                                 token = token,
                                 size = 42.dp,
-                                shapeRadius = 6.dp
+                                shapeRadius = 6.dp,
+                                customCoverUrl = track.coverUrl
                             )
 
                             Spacer(Modifier.width(12.dp))

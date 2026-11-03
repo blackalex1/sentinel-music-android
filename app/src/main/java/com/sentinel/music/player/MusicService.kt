@@ -158,6 +158,10 @@ class MusicService : MediaSessionService() {
 
                 override fun onResponse(call: Call, response: Response) {
                     try {
+                        if (!response.isSuccessful) {
+                            future.setException(IOException("HTTP error loading cover: ${response.code}"))
+                            return
+                        }
                         val bytes = response.body?.bytes()
                         if (bytes != null && bytes.isNotEmpty()) {
                             val originalBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)

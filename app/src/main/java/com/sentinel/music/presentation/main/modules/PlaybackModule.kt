@@ -246,7 +246,7 @@ class PlaybackModule(
     }
 
     fun buildMediaItem(track: TrackDto, token: String, serverUrl: String): MediaItem {
-        val coverUrl = "$serverUrl/api/covers/${track.id}?token=$token"
+        val coverUrl = com.sentinel.music.data.model.PlaybackUrlResolver.resolveCoverUrl(track, serverUrl, token)
         val extras = Bundle().apply {
             putBoolean("IS_LIKED", track.isLiked)
             putBoolean("IS_DISLIKED", track.isDisliked)
@@ -255,12 +255,16 @@ class PlaybackModule(
             .setTitle(track.title)
             .setArtist(track.artist)
             .setAlbumTitle(track.album ?: "Sentinel Music")
-            .setArtworkUri(Uri.parse(coverUrl))
+            .apply {
+                if (!coverUrl.isNullOrBlank()) {
+                    setArtworkUri(Uri.parse(coverUrl))
+                }
+            }
             .setDisplayTitle(track.title)
             .setExtras(extras)
             .build()
 
-        val playUri = offlineManager.getPlaybackUri(track.id, track.safeAudioFormat, token)
+        val playUri = offlineManager.getPlaybackUri(track, token)
         return MediaItem.Builder()
             .setUri(playUri)
             .setMediaId(track.id.toString())
@@ -328,16 +332,18 @@ class PlaybackModule(
             force = true
         )
 
-        if (uiStateFlow.value.isDownloadMode) {
+        if (uiStateFlow.value.isDownloadMode && !track.isPreview && track.id > 0) {
             scope.launch(Dispatchers.IO) {
                 offlineManager.downloadTrack(track, token)
             }
         }
 
-        scope.launch {
-            val fetchedLyrics = lyricsRepository.getLyrics(track.id)
-            if (uiStateFlow.value.currentTrack?.id == track.id) {
-                uiStateFlow.update { it.copy(lyrics = fetchedLyrics) }
+        if (!track.isPreview && track.id > 0) {
+            scope.launch {
+                val fetchedLyrics = lyricsRepository.getLyrics(track.id)
+                if (uiStateFlow.value.currentTrack?.id == track.id) {
+                    uiStateFlow.update { it.copy(lyrics = fetchedLyrics) }
+                }
             }
         }
     }
@@ -402,6 +408,36 @@ class PlaybackModule(
         }
 
         val track = candidateToTrackDto(candidate)
+
+        val active = state.activeDevice
+        if (active != null) {
+            remoteController.playTrack(track, queue = listOf(track), autoPlay = true)
+            val dur = (track.duration * 1000).toLong().coerceAtLeast(1L)
+            val updatedDev = active.copy(
+                currentTrack = track,
+                isPlaying = true,
+                positionMs = 0L,
+                durationMs = dur,
+                queue = listOf(track)
+            )
+            uiStateFlow.update {
+                it.copy(
+                    activeDevice = updatedDev,
+                    currentTrack = track,
+                    isPlaying = true,
+                    currentProgressMs = 0L,
+                    durationMs = dur,
+                    isLiked = false,
+                    isDisliked = false,
+                    queue = listOf(track),
+                    isStreamActive = false,
+                    lyrics = emptyList()
+                )
+            }
+            onSyncRemoteState(updatedDev)
+            return
+        }
+
         val token = sessionManager.token ?: ""
         val serverUrl = sessionManager.serverUrl
 

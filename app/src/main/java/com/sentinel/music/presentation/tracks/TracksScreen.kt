@@ -154,7 +154,7 @@ fun TracksScreen(
 
     // Вычисление отфильтрованных кандидатов из плагинов
     val filteredCandidates = remember(newCandidates, selectedCandidateFilter) {
-        if (selectedCandidateFilter == "all") {
+        val list = if (selectedCandidateFilter == "all") {
             newCandidates
         } else {
             newCandidates.filter { cand ->
@@ -167,6 +167,7 @@ fun TracksScreen(
                 }
             }
         }
+        list.distinctBy { it["candidate_id"] ?: it["id"] ?: it.hashCode() }
     }
 
     // Опции фильтрации кандидатов

@@ -106,9 +106,17 @@ class OfflineManager(
 
     /**
      * Возвращает источник воспроизведения:
+     * - Если это трек-кандидат внешнего поиска: проксирующий стрим предпрослушивания (/api/tracks/candidates/preview).
      * - Если трек уже сохранен на телефоне: локальный файл (без интернета).
-     * - Иначе: защищенный стриминг с сервера с токеном авторизации.
+     * - Иначе: защищенный стриминг с сервера (/api/stream/{id}) с токеном авторизации.
      */
+    fun getPlaybackUri(track: TrackDto, token: String = ""): Uri {
+        if (track.isPreview && !track.candidateId.isNullOrBlank()) {
+            return Uri.parse(com.sentinel.music.data.model.PlaybackUrlResolver.resolvePlaybackUrl(track, serverUrl, token))
+        }
+        return getPlaybackUri(track.id, track.safeAudioFormat, token)
+    }
+
     fun getPlaybackUri(trackId: Int, format: String? = null, token: String = ""): Uri {
         val safeFmt = format?.takeIf { it.isNotBlank() } ?: "mp3"
         val localFile = getLocalAudioFile(trackId, safeFmt)
@@ -123,8 +131,9 @@ class OfflineManager(
             return Uri.fromFile(anyExisting)
         }
 
+        val clean = serverUrl.trim().removeSuffix("/")
         val query = if (token.isNotEmpty()) "?token=${Uri.encode(token)}" else ""
-        return Uri.parse("$serverUrl/api/stream/$trackId$query")
+        return Uri.parse("$clean/api/stream/$trackId$query")
     }
 
     /**
@@ -132,6 +141,7 @@ class OfflineManager(
      * @param force если true, скачивает даже если автоматический режим выключен (например, при ручном скачивании)
      */
     suspend fun downloadTrack(track: TrackDto, token: String = "", force: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        if (track.id <= 0 || track.isPreview) return@withContext false
         if (!force && !isDownloadModeEnabled) return@withContext false
         if (downloadOnlyOnWifi && !isWifiConnected()) return@withContext false
 

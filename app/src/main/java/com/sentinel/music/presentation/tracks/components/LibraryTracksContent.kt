@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicOff
@@ -211,11 +212,11 @@ fun LibraryTracksContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 100.dp, top = 4.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = filteredTracks,
-                        key = { it.id },
-                        contentType = { "track_row" }
-                    ) { track ->
+                        key = { index, track -> "${track.id}_$index" },
+                        contentType = { _, _ -> "track_row" }
+                    ) { _, track ->
                         val isDownloaded = downloadedTrackIds.contains(track.id)
                         val isDownloading = downloadingTrackIds.contains(track.id)
 

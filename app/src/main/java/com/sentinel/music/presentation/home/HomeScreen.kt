@@ -3,6 +3,7 @@ package com.sentinel.music.presentation.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -87,11 +88,11 @@ fun HomeScreen(
                 )
             }
         } else {
-            items(
+            itemsIndexed(
                 items = recentTracks,
-                key = { it.id },
-                contentType = { "track" }
-            ) { track ->
+                key = { index, track -> "${track.id}_$index" },
+                contentType = { _, _ -> "track" }
+            ) { _, track ->
                 val trackIndex = recentTracks.indexOfFirst { it.id == track.id }
                 val upcoming = if (trackIndex != -1 && trackIndex < recentTracks.size - 1) {
                     recentTracks.subList(trackIndex + 1, recentTracks.size)

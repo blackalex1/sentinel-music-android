@@ -127,7 +127,8 @@ fun StreamHeader(
                 serverUrl = serverUrl,
                 token = token,
                 size = 165.dp,
-                shapeRadius = 22.dp
+                shapeRadius = 22.dp,
+                customCoverUrl = currentTrack?.coverUrl
             )
         }
 

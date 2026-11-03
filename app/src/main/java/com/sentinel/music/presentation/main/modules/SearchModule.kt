@@ -92,7 +92,10 @@ class SearchModule(
                     api.searchNewCandidates(query = query, limit = 10)
                 }
                 @Suppress("UNCHECKED_CAST")
-                val candidates = res["candidates"] as? List<Map<String, Any?>> ?: emptyList()
+                val rawCandidates = res["candidates"] as? List<Map<String, Any?>> ?: emptyList()
+                val candidates = rawCandidates.distinctBy {
+                    it["candidate_id"] ?: it["id"] ?: it["url"] ?: it.hashCode()
+                }
                 uiStateFlow.update {
                     it.copy(newCandidateResults = candidates, isSearchingNewCandidates = false)
                 }

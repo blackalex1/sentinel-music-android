@@ -19,9 +19,9 @@ data class TrackDto(
     @SerializedName("gain_db") val gainDb: Double? = null,
     @SerializedName("is_liked") val isLiked: Boolean = false,
     @SerializedName("is_disliked") val isDisliked: Boolean = false,
-    val isPreview: Boolean = false,
-    val candidateId: String? = null,
-    val coverUrl: String? = null
+    @SerializedName(value = "is_preview", alternate = ["isPreview"]) val isPreview: Boolean = false,
+    @SerializedName(value = "candidate_id", alternate = ["candidateId"]) val candidateId: String? = null,
+    @SerializedName(value = "cover_url", alternate = ["coverUrl"]) val coverUrl: String? = null
 ) {
     val safeAudioFormat: String get() = audioFormat?.takeIf { it.isNotBlank() } ?: "mp3"
     val safeTitle: String get() = title?.takeIf { it.isNotBlank() } ?: "Без названия"
@@ -45,14 +45,48 @@ data class TrackDto(
             else -> true
         }
     }
-    fun getCoverUrl(baseUrl: String, token: String = "", size: Int? = null): String {
+    fun getCoverUrl(baseUrl: String, token: String = "", size: Int? = null): String? {
         if (!coverUrl.isNullOrBlank()) return coverUrl
+        if (isPreview || id <= 0) return null
         val clean = baseUrl.trim().removeSuffix("/")
         val base = "$clean/api/covers/$id"
         val params = mutableListOf<String>()
-        if (token.isNotBlank()) params.add("token=$token")
+        if (token.isNotBlank()) params.add("token=${java.net.URLEncoder.encode(token, "UTF-8")}")
         if (size != null && size > 0) params.add("size=$size")
         return if (params.isNotEmpty()) "$base?${params.joinToString("&")}" else base
+    }
+}
+
+/**
+ * Утилита для построения корректных URL аудиопотока и обложек:
+ * - Для внешних треков-кандидатов онлайн-поиска: маршрутизирует стриминг на /api/tracks/candidates/preview
+ *   и использует внешний coverUrl вместо несуществующего ID в фонотеке.
+ * - Для треков фонотеки: обращается к /api/stream/{id} и /api/covers/{id}.
+ */
+object PlaybackUrlResolver {
+    fun resolvePlaybackUrl(
+        track: TrackDto,
+        serverUrl: String,
+        token: String = ""
+    ): String {
+        val clean = serverUrl.trim().removeSuffix("/")
+        return if (track.isPreview && !track.candidateId.isNullOrBlank()) {
+            val encodedCid = java.net.URLEncoder.encode(track.candidateId, "UTF-8")
+            val tokenParam = if (token.isNotBlank()) "&token=${java.net.URLEncoder.encode(token, "UTF-8")}" else ""
+            "$clean/api/tracks/candidates/preview?candidate_id=$encodedCid$tokenParam"
+        } else {
+            val tokenParam = if (token.isNotBlank()) "?token=${java.net.URLEncoder.encode(token, "UTF-8")}" else ""
+            "$clean/api/stream/${track.id}$tokenParam"
+        }
+    }
+
+    fun resolveCoverUrl(
+        track: TrackDto,
+        serverUrl: String,
+        token: String = "",
+        size: Int? = null
+    ): String? {
+        return track.getCoverUrl(serverUrl, token, size)
     }
 }
 

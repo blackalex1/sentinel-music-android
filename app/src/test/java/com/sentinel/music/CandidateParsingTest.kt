@@ -139,4 +139,43 @@ class CandidateParsingTest {
         assertEquals("mp3", trackDto.audioFormat)
         assertTrue(trackDto.isPreview)
     }
+    @Test
+    fun testDuplicateCandidateKeyDisambiguation() {
+        val duplicateId = "provider_user_track.flac"
+        val rawCandidates = listOf(
+            mapOf("candidate_id" to duplicateId, "title" to "Track A"),
+            mapOf("candidate_id" to duplicateId, "title" to "Track A (copy)"),
+            mapOf("candidate_id" to "provider_user_track_2.flac", "title" to "Track B")
+        )
+
+        val keys = rawCandidates.mapIndexed { index, cand ->
+            val cid = cand["candidate_id"] as? String ?: cand["id"] as? String ?: cand.hashCode().toString()
+            "${cid}_$index"
+        }
+
+        assertEquals(3, keys.size)
+        assertEquals(3, keys.distinct().size)
+        assertEquals("provider_user_track.flac_0", keys[0])
+        assertEquals("provider_user_track.flac_1", keys[1])
+        assertEquals("provider_user_track_2.flac_2", keys[2])
+    }
+
+    @Test
+    fun testCandidateListDeduplication() {
+        val duplicateId = "provider_user_track.flac"
+        val rawCandidates = listOf(
+            mapOf("candidate_id" to duplicateId, "title" to "Track 1"),
+            mapOf("candidate_id" to duplicateId, "title" to "Track 1 Duplicate"),
+            mapOf("candidate_id" to "other_id", "title" to "Track 2")
+        )
+
+        val deduped = rawCandidates.distinctBy {
+            it["candidate_id"] ?: it["id"] ?: it["url"] ?: it.hashCode()
+        }
+
+        assertEquals(2, deduped.size)
+        assertEquals("Track 1", deduped[0]["title"])
+        assertEquals("Track 2", deduped[1]["title"])
+    }
 }
+

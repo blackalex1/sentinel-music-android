@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -152,7 +153,7 @@ fun PlaylistsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    items(details.tracks, key = { it.id }) { track ->
+                    itemsIndexed(details.tracks, key = { index, track -> "${track.id}_$index" }) { _, track ->
                         val isPlayingCurrent = currentTrack?.id == track.id
                         val isDownloaded = downloadedTrackIds.contains(track.id)
                         val isDownloading = downloadingTrackIds.contains(track.id)
@@ -268,7 +269,7 @@ fun PlaylistsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 100.dp, top = 4.dp)
                 ) {
-                    items(playlists, key = { it.id }) { pl ->
+                    itemsIndexed(playlists, key = { index, pl -> "${pl.id}_$index" }) { _, pl ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
