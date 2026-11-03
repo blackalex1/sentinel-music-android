@@ -149,7 +149,7 @@ class CandidateParsingTest {
         )
 
         val keys = rawCandidates.mapIndexed { index, cand ->
-            val cid = cand["candidate_id"] as? String ?: cand["id"] as? String ?: cand.hashCode().toString()
+            val cid = cand["candidate_id"] ?: cand["id"] ?: cand.hashCode().toString()
             "${cid}_$index"
         }
 
