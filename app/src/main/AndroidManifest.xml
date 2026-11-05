@@ -24,6 +24,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:enableOnBackInvokedCallback="true">
 
+        <!-- Главная точка входа приложения: android:exported="true" обязателен для запуска из лончера (ACTION_MAIN / CATEGORY_LAUNCHER) -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -36,6 +37,7 @@
             </intent-filter>
         </activity>
 
+        <!-- Фоновый сервис воспроизведения Media3: android:exported="true" требуется для обработки системных кнопок гарнитуры и MediaSession -->
         <service
             android:name=".player.MusicService"
             android:exported="true"
