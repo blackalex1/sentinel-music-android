@@ -1,7 +1,6 @@
 package com.sentinel.music
 
 import android.app.Application
-import javax.net.ssl.HttpsURLConnection
 import com.sentinel.music.data.api.NetworkClient
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -12,19 +11,6 @@ import coil.memory.MemoryCache
 class MusicApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
-        val defaultVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
-        HttpsURLConnection.setDefaultHostnameVerifier { hostname, session ->
-            if (defaultVerifier.verify(hostname, session)) {
-                true
-            } else {
-                val clean = hostname.trim().lowercase()
-                clean == "localhost" ||
-                        clean == "127.0.0.1" ||
-                        clean.startsWith("192.168.") ||
-                        clean.startsWith("10.") ||
-                        clean.matches(Regex("""^172\.(1[6-9]|2[0-9]|3[0-1])\..*"""))
-            }
-        }
     }
 
     override fun newImageLoader(): ImageLoader {
