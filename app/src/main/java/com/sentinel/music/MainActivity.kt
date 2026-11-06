@@ -32,6 +32,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Безопасная валидация точки входа для экспортированной активности
+        val action = intent?.action
+        if (action != null && action != android.content.Intent.ACTION_MAIN && action != android.content.Intent.ACTION_VIEW) {
+            android.util.Log.w("MainActivity", "Received unexpected external intent action: $action")
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)

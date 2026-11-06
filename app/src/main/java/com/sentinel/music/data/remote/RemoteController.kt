@@ -144,11 +144,11 @@ class RemoteController(
         val modelName = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
         val deviceName = "Смартфон ($modelName)"
 
-        val wsUrl = serverUrl
-            .replaceFirst("http://", "ws://")
-            .replaceFirst("https://", "wss://")
-            .removeSuffix("/") +
-                "/api/remote/ws?token=" + URLEncoder.encode(token, "UTF-8") +
+        val baseUri = java.net.URI.create(serverUrl.trimEnd('/'))
+        val scheme = if (baseUri.scheme?.equals("https", ignoreCase = true) == true) "wss" else "ws"
+        val authority = baseUri.rawAuthority ?: baseUri.host
+        val wsUrl = "$scheme://$authority/api/remote/ws?" +
+                "token=" + URLEncoder.encode(token, "UTF-8") +
                 "&device_id=" + URLEncoder.encode(myId, "UTF-8") +
                 "&device_name=" + URLEncoder.encode(deviceName, "UTF-8") +
                 "&device_type=hybrid"
