@@ -25,6 +25,7 @@
         android:enableOnBackInvokedCallback="true">
 
         <!-- Главная точка входа приложения: android:exported="true" обязателен для запуска из лончера (ACTION_MAIN / CATEGORY_LAUNCHER) -->
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity, exported_activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
