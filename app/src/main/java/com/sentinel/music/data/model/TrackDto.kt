@@ -24,8 +24,8 @@ data class TrackDto(
     @SerializedName(value = "cover_url", alternate = ["coverUrl"]) val coverUrl: String? = null
 ) {
     val safeAudioFormat: String get() = audioFormat?.takeIf { it.isNotBlank() } ?: "mp3"
-    val safeTitle: String get() = title?.takeIf { it.isNotBlank() } ?: "Без названия"
-    val safeArtist: String get() = artist?.takeIf { it.isNotBlank() } ?: "Неизвестный исполнитель"
+    val safeTitle: String get() = title.takeIf { it.isNotBlank() } ?: "Без названия"
+    val safeArtist: String get() = artist.takeIf { it.isNotBlank() } ?: "Неизвестный исполнитель"
 
     fun matchesMood(mood: String): Boolean {
         if (mood.isBlank() || mood == "default" || mood == "all") return true

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.sentinel.music.player
 
 import android.content.Context
@@ -28,6 +30,7 @@ data class EqualizerState(
     val virtualizerStrength: Int = 0 // 0..1000 (0%..100%)
 )
 
+@Suppress("DEPRECATION")
 class EqualizerManager private constructor(context: Context) {
 
     private val appContext = context.applicationContext
